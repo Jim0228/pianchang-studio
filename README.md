@@ -288,6 +288,14 @@ data/                    运行时生成（数据库、素材、导出）
   - `covers/cover.jpg`：封面（无叠字）
   - `exports/`：ZIP（MP4 + 封面 + 脚本 + SRT + 文案 + manifest）
 
+**v0.4 场景一致分镜 + 单镜重生成（声波电动牙刷 / digital_openbox）**
+
+- 项目 `data/projects/prj_8d96528dd7c5/`，风格 `digital_openbox`（深色木桌、冷调侧光、固定道具）
+- 先生成 1 张空场景 `scene_anchor_digital_openbox.jpg`，再逐镜生成 6 张分镜；每张 prompt 都带同一份 `scene_bible`
+- 联系表 `storyboards/contact_sheet.jpg`：第一格 REFERENCE、第二格 SCENE、其后 SHOT 01–06
+- 单镜重生成实测：改第 3 镜 prompt 后重生成，仅 `shot_03.jpg` 哈希变化，其余 5 张字节级不变
+- 6 张分镜耗时 1234s（网关排队偏慢）；成片由页面「生成成片」或 `POST /api/scripts/{id}/render` 触发生成
+
 ---
 
 ## API 速览
