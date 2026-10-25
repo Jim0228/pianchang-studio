@@ -2,7 +2,7 @@
 
 输入产品图 + 商品描述，选择视频风格 Skill，自动生成脚本、分镜图与平台成片。视频优先，图片与文案作为支撑。
 
-当前版本：**v0.3：商品图 + 描述 → 脚本 → 分镜图 → 图生视频全链路（DeepSeek + REST）**
+当前版本：**v0.4：9 个风格 Skill + 场景基准分镜图 + 单镜重生成 + 成片导出（DeepSeek + REST）**
 技术栈：Vue 3 + TypeScript + Vite + Element Plus ｜ Python 3.12 + FastAPI + SQLite ｜ Pillow + FFmpeg ｜ DeepSeek ｜ REST 美术资源
 
 ---
@@ -10,12 +10,13 @@
 ## 已经能做什么
 
 - 新建项目、上传产品图、填写商品描述，AI 解析商品档案。
-- 6 个视频风格 Skill：痛点反转、开箱测评、产品特写/ASMR、场景生活方式、工厂溯源、教程干货。
-- 按品类、目标、平台推荐 Top3 风格，并给出理由。
-- 生成结构化脚本与 4–6 个分镜，总时长严格等于 15 秒。
-- 分镜可编辑：画面、运镜、口播、字幕、时长、Prompt。
-- **分镜图**：真实模式逐镜调用 REST 图片模型，按「商品锁定 + 风格锚点 + 负向词」生成 9:16 无文字分镜图，并输出联系表 `contact_sheet.jpg` 与 `review.json` 人工核对；Mock 模式回退 Pillow 海报。
-- **成片**：以分镜图为首帧做图生视频；FFmpeg 统一 1080×1920 / 30fps、烧字幕、加 AI 标识、拼接、生成封面。
+- 9 个视频风格 Skill：痛点反转、开箱测评、产品特写/ASMR、场景生活方式、工厂溯源、教程干货、数码开箱实测、美妆试色、食品食欲感。
+- 按品类、目标、平台推荐 Top3 风格，并给出理由；每个 Skill 自带 beats、镜头规范、视觉规范、**场景基准（scene_bible）** 与文案模板。
+- 生成结构化脚本与 4–6 个分镜，总时长严格等于 15 秒；脚本、口播、字幕、时长、Prompt 全部可编辑，改哪一镜只重置哪一镜。
+- **分镜图**：真实模式逐镜调用 REST 图片模型，按「商品锁定 + 风格锚点 + 场景基准 + 负向词」生成 9:16 无文字分镜图。
+- **场景统一**：每个脚本先出 1 张空场景 `scene_anchor`（同机位、同光线、同色板），5 张分镜都以它为环境参考，联系表 `contact_sheet.jpg` 第一格是商品参考、第二格是场景基准。
+- **单镜重生成**：每张分镜可单独改画面/Prompt 后只重生成这一张，其它镜头与已出片镜头保留；不再"改一个字全部重跑"。
+- **成片**：以分镜图为首帧做图生视频；FFmpeg 统一 1080×1920 / 30fps、烧字幕、加 AI 标识、拼接、生成封面；支持直接下载 MP4 或导出 ZIP。
 - 导出 ZIP：MP4、封面、脚本 JSON、SRT、发布文案、manifest。
 - 合规检查：极限词/功效词扫描，结果写入 manifest。
 - Mock / Real 双模式；真实能力由 LLM / 图片 / 视频三个 provider 决定。
@@ -213,7 +214,7 @@ backend/
     schemas.py           请求模型
     api.py               REST 路由
     jobs.py              分镜图 / 渲染 / 真实模式分支
-    skills/*.yaml        6 个视频风格
+    skills/*.yaml        9 个视频风格（含 scene_bible 场景基准）
     presets/platforms.yaml
     services/            解析、推荐、脚本、分镜、关键帧、FFmpeg、打包、合规
     services/providers/  DeepSeek / REST Art / Ark / Seedance / MCP
@@ -304,7 +305,9 @@ data/                    运行时生成（数据库、素材、导出）
 | POST | `/api/projects/{id}/scripts` | 生成脚本 |
 | PATCH | `/api/scripts/{id}` | 编辑脚本/分镜 |
 | POST | `/api/scripts/{id}/previs` | 生成分镜图（`?force=true` 强制重新生成） |
+| POST | `/api/shots/{id}/regenerate` | 只重新生成某一张分镜图 |
 | POST | `/api/scripts/{id}/render` | 生成成片 |
+| GET | `/api/videos/{id}/download` | 直接下载 1080×1920 MP4 |
 | GET | `/api/generations/{id}` | 轮询任务 |
 | POST | `/api/videos/{id}/export` | 导出 ZIP |
 | GET | `/api/exports/{id}/download` | 下载 |

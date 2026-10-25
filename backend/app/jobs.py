@@ -185,6 +185,57 @@ def _storyboard_review_one(project_id: str, script_id: str, settings: Settings) 
         session.close()
 
 
+async def regenerate_shot_storyboard(generation_id: str, shot_id: str, settings: Settings) -> None:
+    """只重生成一张分镜图：保留其它镜头，清掉这一镜的旧视频等待重渲。"""
+    project_id: str | None = None
+    script_id: str | None = None
+    total = 0
+    session = SessionLocal()
+    try:
+        shot = session.get(Shot, shot_id)
+        if shot is None:
+            raise RuntimeError("镜头不存在")
+        script = session.get(Script, shot.script_id)
+        if script is None:
+            raise RuntimeError("脚本不存在")
+        project_id = script.project_id
+        script_id = script.id
+        total = session.query(Shot).filter(Shot.script_id == script_id).count()
+        shot.clip_asset_id = None
+        shot.subtitle_asset_id = None
+        shot.error = ""
+        shot.status = "pending"
+        session.commit()
+        _update_generation(generation_id, status="running", progress=15, message="正在重新生成分镜图")
+    finally:
+        session.close()
+
+    try:
+        if _storyboard_stage_enabled(settings):
+            await _storyboard_one(project_id, script_id, shot_id, settings, force=True)
+            _update_generation(generation_id, progress=85, message="正在更新联系表")
+            review = await asyncio.to_thread(
+                _storyboard_review_one, project_id, script_id, settings
+            )
+            result = {
+                "shot_id": shot_id,
+                "contact_sheet": review.get("contact_sheet"),
+                "scene_anchor": review.get("scene_anchor"),
+            }
+        else:
+            await asyncio.to_thread(_previs_one, project_id, script_id, shot_id, total, settings)
+            result = {"shot_id": shot_id}
+        _update_generation(
+            generation_id,
+            status="succeeded",
+            progress=100,
+            message="分镜图已更新",
+            result=result,
+        )
+    except Exception as exc:  # noqa: BLE001
+        _fail(generation_id, project_id, exc)
+
+
 def _subtitle_one(project_id: str, shot_id: str, settings: Settings) -> None:
     session = SessionLocal()
     try:

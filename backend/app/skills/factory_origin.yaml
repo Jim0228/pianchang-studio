@@ -49,3 +49,11 @@ copy:
   quality: ["每一批都经过检查", "看得见的流程，才放心"]
   product: ["{title}，{sp1}", "从源头到手上，就这么直接"]
   cta: ["想看更多细节，点下方", "源头直发，下方了解"]
+
+scene_bible:
+  location: "产地车间与原料处理区"
+  time_of_day: "daytime"
+  props: ["水泥地面", "金属设备", "木质托盘", "自然光窗"]
+  lighting: "自然天光与厂房侧光结合，层次分明"
+  grade: "低饱和纪实，冷灰与暖木"
+  lens: "24-70mm，中等景深"

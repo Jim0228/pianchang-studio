@@ -49,3 +49,11 @@ copy:
   test: ["实测：{sp1}", "直接上手试，{sp2}"]
   verdict: ["总结：{sp1}，适合{audience}", "这个价位，{sp2}"]
   cta: ["链接放下面了，自己看", "想入的趁活动"]
+
+scene_bible:
+  location: "浅色木纹桌面的开箱台"
+  time_of_day: "daytime"
+  props: ["浅橡木桌面", "牛皮纸快递箱", "白色配件托盘", "柔光箱"]
+  lighting: "顶部柔光箱 + 侧补光，阴影柔和"
+  grade: "清爽中性白，高亮通透"
+  lens: "35mm 等效，中等景深"

@@ -1,0 +1,55 @@
+id: food_appetite
+name: 食品诱惑 / 食欲感
+category: seeding
+goal: 种草
+version: 1
+platforms: [douyin, xiaohongshu]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [食品饮料, 生鲜, 烘焙, 茶酒, 农产品]
+not_suitable: [3C数码, 虚拟服务]
+beats:
+  - { id: hook, seconds: 2, purpose: "用声音/特写制造食欲" }
+  - { id: sizzle, seconds: 3, purpose: "烹饪或冲泡的动感" }
+  - { id: bite, seconds: 4, purpose: "入口/拉丝/流心的高潮" }
+  - { id: ingredient, seconds: 3, purpose: "原料与工艺背书" }
+  - { id: cta, seconds: 3, purpose: "价格与行动指令" }
+shots:
+  min: 4
+  max: 5
+  seconds: [2, 5]
+  product_visible_ratio: 0.65
+  presenter: none
+prompt:
+  style: "美食广告质感，暖调高光，油亮湿润，微距特写，食欲感强"
+  lighting: "侧逆光勾勒食物质感，暖色补光"
+  palette: ["#F7E9D7", "#C97B3C", "#2A1D14", "#E8A33D"]
+  camera: [微距推近, 俯拍固定, 侧面特写, 慢动作感平移, 环绕]
+  negative: "变形, 错误文字, 水印, 低清晰度, 焦黑, 塑料感, 不新鲜"
+  product_lock: "严格保持商品包装、颜色、LOGO 与文字不变；食物状态需真实，不得夸大份量"
+subtitle:
+  style: warm_white
+  position: lower_third
+  max_chars_per_line: 12
+audio:
+  mode: none
+  bgm_mood: warm
+scenes:
+  - "刚出锅/刚冲好的食物特写，热气升腾"
+  - "食材在锅中翻炒或液体倾倒的动感瞬间"
+  - "切开/拉丝/流心的微距特写，质感饱满"
+  - "原料整齐摆放，产地感干净"
+  - "成品与包装同框，份量真实"
+scene_bible:
+  location: "暖调木质台面的美食拍摄区"
+  time_of_day: "daytime"
+  props: ["深色木纹台面", "粗陶餐盘", "亚麻餐布", "冒热气的食物"]
+  lighting: "侧逆光勾勒质感，暖色补光"
+  grade: "暖橙色调，高光油亮，暗部深"
+  lens: "50mm 微距，浅景深"
+copy:
+  hook: ["这个声音，饿了没", "别在晚上看这个"]
+  sizzle: ["{sp1}，从这一步开始", "火候和声音，都对"]
+  bite: ["咬下去的那一刻，{sp1}", "拉丝/流心，看这一口"]
+  ingredient: ["原料就这几样：{scene_short}", "好吃是有原因的"]
+  cta: ["价格放下面了，趁新鲜", "想吃的，点下方"]

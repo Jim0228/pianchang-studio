@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "AI 电商短视频工作台"
-    version: str = "0.3.0"
+    version: str = "0.4.0"
 
     ai_mode: str = "mock"  # mock | real
 

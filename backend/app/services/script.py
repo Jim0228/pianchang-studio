@@ -466,17 +466,30 @@ def patch_script(session: Session, script: Script, payload) -> dict:
             row = existing.get(int(patch["idx"]))
             if row is None:
                 continue
-            row.seconds = float(patch.get("seconds", row.seconds))
+            seconds = float(patch.get("seconds", row.seconds))
+            visual_changed = (
+                str(patch.get("scene", row.scene)) != str(row.scene)
+                or str(patch.get("camera", row.camera)) != str(row.camera)
+                or str(patch.get("action", row.action)) != str(row.action)
+                or str(patch.get("prompt", row.prompt)) != str(row.prompt)
+                or seconds != float(row.seconds)
+            )
+            text_changed = str(patch.get("on_screen", row.on_screen)) != str(row.on_screen)
+            row.seconds = seconds
             row.scene = patch.get("scene", row.scene)
             row.camera = patch.get("camera", row.camera)
             row.action = patch.get("action", row.action)
             row.voiceover = truncate(patch.get("voiceover", row.voiceover), 60)
             row.on_screen = truncate(patch.get("on_screen", row.on_screen), 18)
             row.prompt = patch.get("prompt", row.prompt)
-            row.status = "pending"
-            row.keyframe_asset_id = None
-            row.subtitle_asset_id = None
-            row.clip_asset_id = None
+            # 只重置真正改动过的镜头资产，避免"改一句文案就丢掉全部分镜图"
+            if visual_changed:
+                row.keyframe_asset_id = None
+                row.clip_asset_id = None
+                row.status = "pending"
+            if text_changed:
+                row.subtitle_asset_id = None
+                row.clip_asset_id = None
         session.flush()
 
         shots = session.query(Shot).filter(Shot.script_id == script.id).order_by(Shot.idx.asc()).all()

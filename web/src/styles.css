@@ -175,6 +175,13 @@ a {
   color: var(--muted);
 }
 
+.btn-small {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: 8px;
+}
+
 .btn-ghost:hover {
   color: var(--ink);
   background: rgba(43, 33, 27, 0.05);

@@ -46,3 +46,11 @@ copy:
   reveal: ["直到我遇到{title}", "换上{title}之后，真的省事"]
   proof: ["{sp1}，{sp2}，实测看得见", "不是玄学，{sp1}就是底气"]
   cta: ["现在下单，{price}元到手", "点击下方，把麻烦一次解决"]
+
+scene_bible:
+  location: "现代家庭厨房的灶台与操作台区域"
+  time_of_day: "daytime"
+  props: ["浅色石英台面", "不锈钢灶台", "折叠的微纤维抹布", "百叶窗光影"]
+  lighting: "窗边侧逆光，柔和阴影，干净通透"
+  grade: "暖米色，低饱和，柔和对比"
+  lens: "35mm 等效，浅景深"

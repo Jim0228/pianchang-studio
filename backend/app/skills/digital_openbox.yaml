@@ -1,0 +1,58 @@
+id: digital_openbox
+name: 数码开箱 / 参数实测
+category: seeding
+goal: 种草
+version: 1
+platforms: [douyin, xiaohongshu, bilibili]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [3C数码, 智能家电, 电脑办公, 影音设备]
+not_suitable: [生鲜, 虚拟服务]
+beats:
+  - { id: hook, seconds: 2, purpose: "用一个反常识结论抓人" }
+  - { id: unbox, seconds: 3, purpose: "开箱与外观第一印象" }
+  - { id: detail, seconds: 3, purpose: "接口/按键/做工细节" }
+  - { id: test, seconds: 3, purpose: "真实跑分或使用实测" }
+  - { id: verdict, seconds: 2, purpose: "优点缺点与适合人群" }
+  - { id: cta, seconds: 2, purpose: "行动指令" }
+shots:
+  min: 4
+  max: 6
+  seconds: [2, 5]
+  product_visible_ratio: 0.7
+  presenter: none
+prompt:
+  style: "数码测评视频质感，干净桌面，冷调科技感，细节锐利"
+  lighting: "顶部柔光 + 冷色侧光，金属高光克制"
+  palette: ["#EEF2F6", "#C9D3DE", "#161A1F", "#3B82F6"]
+  camera: [俯拍开箱, 产品环绕, 接口微距, 平视固定, 近景推近]
+  negative: "变形, 多余部件, 错误文字, 水印, 低清晰度, 屏幕过曝, 假 LOGO"
+  product_lock: "严格保持商品的外形、比例、颜色、材质、接口、屏幕与 LOGO 不变；不得虚构参数与认证"
+subtitle:
+  style: tech_white
+  position: lower_third
+  max_chars_per_line: 12
+audio:
+  mode: none
+  bgm_mood: clean
+scenes:
+  - "深色桌面上，包装盒与产品并排摆放，冷调侧光"
+  - "产品从包装中取出，配件整齐摊开"
+  - "接口与按键的微距特写，金属纹理清晰"
+  - "产品在真实使用场景中工作，屏幕亮起"
+  - "使用前后或竞品对比，结论直观"
+  - "产品与配件全家福，留白干净"
+scene_bible:
+  location: "深色木纹桌面上的数码测评台"
+  time_of_day: "studio"
+  props: ["深色木纹桌面", "浅灰背景板", "产品包装盒", "白色配件托盘"]
+  lighting: "顶部柔光 + 冷色侧光，金属高光克制"
+  grade: "冷调科技感，中性白平衡，高对比"
+  lens: "35mm 等效，中等景深"
+copy:
+  hook: ["先别急着买，看完这 15 秒", "{title}的真实水平，一次说清"]
+  unbox: ["包装和配件，先给个全景", "第一眼质感，比预期好"]
+  detail: ["细节看这里：{scene_short}", "接口和做工，都在这几帧"]
+  test: ["实测：{sp1}", "上手跑一遍，{sp2}"]
+  verdict: ["优点 {sp1}，缺点也说", "适合{audience}，不适合追求极致的人"]
+  cta: ["参数和价格放下面了", "想入的，点下方看详情"]

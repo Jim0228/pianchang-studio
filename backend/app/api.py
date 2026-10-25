@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from .config import Settings
 from .db import get_db
 from .errors import AppError
-from .jobs import regenerate_shot, run_previs, run_render
+from .jobs import regenerate_shot_storyboard, run_previs, run_render
 from .models import Asset, Export, Generation, Product, Project, Script, Shot, Skill, Video
 from .schemas import (
     ProjectCreate,
@@ -471,14 +471,17 @@ async def regenerate(
     script = db.get(Script, shot.script_id)
     if script is None:
         raise AppError("NOT_FOUND", "脚本不存在", status_code=404)
+    if settings.image_provider_name == "rest" and not settings.rest_art_configured:
+        raise AppError("REST_NOT_CONFIGURED", "重新生成分镜图需要配置 REST_ART_BASE_URL / REST_ART_TOKEN", status_code=400)
     generation = Generation(id=new_id("gen"), project_id=script.project_id, stage="previs", status="queued")
     db.add(generation)
     db.commit()
     db.refresh(generation)
     if settings.sync_jobs:
-        await regenerate_shot(shot_id, settings, generation.id)
+        await regenerate_shot_storyboard(generation.id, shot_id, settings)
     else:
-        asyncio.create_task(regenerate_shot(shot_id, settings, generation.id))
+        asyncio.create_task(regenerate_shot_storyboard(generation.id, shot_id, settings))
+    db.refresh(generation)
     return _generation_dict(generation)
 
 
@@ -521,6 +524,23 @@ def create_export(video_id: str, db: Session = Depends(get_db), settings: Settin
         "filename": path.name,
         "size": path.stat().st_size if path.exists() else 0,
     }
+
+
+@router.get("/videos/{video_id}/download")
+def download_video(
+    video_id: str,
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+):
+    video = db.get(Video, video_id)
+    if video is None:
+        raise AppError("NOT_FOUND", "成片不存在", status_code=404)
+    path = settings.data_path / video.path
+    if not path.exists():
+        raise AppError("NOT_FOUND", "成片文件已丢失", status_code=404)
+    project = db.get(Project, video.project_id)
+    name = re.sub(r'[\\/:*?"<>|]+', "_", (project.name if project else "AI视频") or "AI视频")
+    return FileResponse(path, filename=f"{name}_1080x1920.mp4", media_type="video/mp4")
 
 
 @router.get("/exports/{export_id}/download")

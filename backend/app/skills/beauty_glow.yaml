@@ -1,0 +1,55 @@
+id: beauty_glow
+name: 美妆试色 / 妆效
+category: seeding
+goal: 种草
+version: 1
+platforms: [douyin, xiaohongshu]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [美妆个护, 香水, 护肤, 饰品]
+not_suitable: [3C数码, 大件家居]
+beats:
+  - { id: hook, seconds: 2, purpose: "素颜/上妆对比制造反差" }
+  - { id: texture, seconds: 3, purpose: "质地与颜色特写" }
+  - { id: apply, seconds: 4, purpose: "上脸/上手过程" }
+  - { id: result, seconds: 3, purpose: "妆效结果与光线" }
+  - { id: cta, seconds: 3, purpose: "色号与行动指令" }
+shots:
+  min: 4
+  max: 5
+  seconds: [2, 5]
+  product_visible_ratio: 0.6
+  presenter: none
+prompt:
+  style: "美妆广告质感，柔光棚拍，肤色通透，颜色准确，干净高级"
+  lighting: "大面积柔光 + 轻微轮廓光，避免硬阴影"
+  palette: ["#FBF4F0", "#E8C9BF", "#2B2320", "#D96C6C"]
+  camera: [产品微距, 手部试色特写, 平视固定, 近景推近, 环绕特写]
+  negative: "变形, 错误文字, 水印, 低清晰度, 肤色失真, 塑料感, 夸张磨皮"
+  product_lock: "严格保持商品包装、瓶身、颜色、色号文字与 LOGO 不变；不得改变内容物质地"
+subtitle:
+  style: soft_pink
+  position: lower_third
+  max_chars_per_line: 10
+audio:
+  mode: none
+  bgm_mood: soft
+scenes:
+  - "浅粉色背景前的产品静置特写，瓶身干净"
+  - "产品质地挤出/蘸取的特写，纹理细腻"
+  - "手背或唇部试色，颜色均匀铺开"
+  - "完成妆效的半脸或局部特写，柔光通透"
+  - "产品与妆效同框，色号可见"
+scene_bible:
+  location: "浅粉色背景的美妆摄影棚"
+  time_of_day: "studio"
+  props: ["浅粉色背景纸", "白色亚克力台面", "化妆刷", "柔光箱"]
+  lighting: "大面积柔光 + 轻微轮廓光，避免硬阴影"
+  grade: "低饱和奶油色，肤色通透，颜色准确"
+  lens: "85mm 等效，浅景深"
+copy:
+  hook: ["这个颜色，素颜也敢涂", "黄皮也能驾驭的{sp1}"]
+  texture: ["质地看这里：{scene_short}", "一抹开，就知道细不细"]
+  apply: ["上脸效果，直接看", "薄涂厚涂，两种感觉"]
+  result: ["妆效就是这样，{sp1}", "自然光下也没翻车"]
+  cta: ["色号放下面了，按肤色选", "想要的，点下方看同款"]

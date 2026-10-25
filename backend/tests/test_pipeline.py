@@ -44,7 +44,7 @@ def test_health_skills_and_platforms(client):
 
     skills = client.get("/api/skills")
     assert skills.status_code == 200
-    assert len(skills.json()) == 6
+    assert len(skills.json()) == 9
 
     platforms = client.get("/api/platforms")
     assert platforms.status_code == 200
@@ -182,4 +182,65 @@ def test_storyboard_prompt_locks_identity_and_bans_text():
     assert "exact first frame" in video
     assert "缓慢推近" in video
     assert "no morphing" in video
+
+
+def _project_with_script(client):
+    project = client.post(
+        "/api/projects",
+        json={
+            "name": "声波电动牙刷",
+            "description": "白色机身，五档模式，IPX7 防水，续航 30 天，128 元",
+            "platform": "douyin",
+            "duration": 15,
+            "ratio": "9:16",
+        },
+    ).json()
+    project_id = project["id"]
+    client.post(
+        f"/api/projects/{project_id}/upload",
+        files=[("files", ("product.jpg", make_product_image(), "image/jpeg"))],
+    )
+    client.post(f"/api/projects/{project_id}/analyze")
+    recommended = client.post("/api/skills/recommend", json={"project_id": project_id}).json()["items"][0]
+    script = client.post(
+        f"/api/projects/{project_id}/scripts",
+        json={"skill_id": recommended["id"], "platform": "douyin", "duration": 15, "ratio": "9:16"},
+    ).json()
+    client.post(f"/api/scripts/{script['id']}/previs")
+    detail = client.get(f"/api/projects/{project_id}").json()
+    return project_id, detail
+
+
+def test_regenerate_one_shot_keeps_other_storyboards(client):
+    project_id, detail = _project_with_script(client)
+    shots = detail["script"]["shots"]
+    assert shots and all(shot["keyframe_path"] for shot in shots)
+
+    payload = {
+        "shots": [
+            {
+                "idx": shot["idx"],
+                "seconds": shot["seconds"],
+                "scene": shot["scene"],
+                "camera": shot["camera"],
+                "action": shot["action"],
+                "voiceover": shot["voiceover"],
+                "on_screen": shot["on_screen"],
+                "prompt": shot["prompt"],
+            }
+            for shot in shots
+        ]
+    }
+    payload["shots"][0]["prompt"] = "改成侧逆光微距，突出瓶身质感"
+    patched = client.patch(f"/api/scripts/{detail['script']['id']}", json=payload).json()
+    assert patched["shots"][0]["keyframe_path"] is None
+    assert all(shot["keyframe_path"] for shot in patched["shots"][1:])
+
+    generation = client.post(f"/api/shots/{shots[0]['id']}/regenerate").json()
+    assert generation["status"] == "succeeded", generation.get("error")
+
+    after = client.get(f"/api/projects/{project_id}").json()["script"]["shots"]
+    assert all(shot["keyframe_path"] for shot in after)
+    assert after[0]["keyframe_path"] == f"projects/{project_id}/keyframes/shot_01.jpg"
+
 

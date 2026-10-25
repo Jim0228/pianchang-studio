@@ -11,6 +11,7 @@ import {
   type Product,
   type Project,
   type Script,
+  type Shot,
   type Skill,
   type Video,
 } from '../api'
@@ -47,6 +48,8 @@ const busy = ref(false)
 const busyText = ref('')
 const previsReady = ref(false)
 const pageLoading = ref(false)
+const frameVersion = ref(0)
+const regeneratingShot = ref('')
 
 const displaySkills = computed(() => (recommendations.value.length ? recommendations.value : store.skills))
 const totalSeconds = computed(() =>
@@ -317,11 +320,39 @@ async function startPrevis(force = false) {
     if (final.status !== 'succeeded') throw new Error(final.error || '预演失败')
     script.value = normalizeScript(await api.script(script.value.id))
     previsReady.value = true
+    frameVersion.value += 1
     ElMessage.success(`${frameLabel.value}已就绪，可以生成成片了`)
   } catch (error) {
     ElMessage.error((error as Error).message)
   } finally {
     busy.value = false
+  }
+}
+
+function frameSrc(path?: string | null) {
+  return path ? `${mediaUrl(path)}?v=${frameVersion.value}` : ''
+}
+
+async function regenerateShot(shot: Shot) {
+  if (!script.value) return
+  busy.value = true
+  regeneratingShot.value = shot.id
+  try {
+    busyText.value = `正在重新生成 #${shot.idx} 分镜…`
+    await saveScript(false)
+    generation.value = await api.regenerateShot(shot.id)
+    const final = await waitGeneration(generation.value.id, (item) => {
+      generation.value = item
+    })
+    if (final.status !== 'succeeded') throw new Error(final.error || '重新生成失败')
+    script.value = normalizeScript(await api.script(script.value.id))
+    frameVersion.value += 1
+    ElMessage.success(`#${shot.idx} 分镜已更新`)
+  } catch (error) {
+    ElMessage.error((error as Error).message)
+  } finally {
+    busy.value = false
+    regeneratingShot.value = ''
   }
 }
 
@@ -405,7 +436,7 @@ function updateHashtags(value: string) {
           <label class="field-label">项目名</label>
           <el-input v-model="form.name" size="large" placeholder="例如：厨房油污清洁剂" />
           <label class="field-label">商品描述</label>
-          <el-textarea
+          <el-input type="textarea"
             v-model="form.description"
             :rows="6"
             placeholder="写清楚品类、规格、核心卖点、适用人群。例如：500ml 植物配方，不伤手，一喷一擦，厨房灶台油烟机都能用。"
@@ -546,7 +577,7 @@ function updateHashtags(value: string) {
           </div>
         </div>
         <label class="field-label">正文</label>
-        <el-textarea v-model="script.caption.body" :rows="3" />
+        <el-input type="textarea" v-model="script.caption.body" :rows="3" />
       </section>
 
       <div class="section-head">
@@ -572,7 +603,7 @@ function updateHashtags(value: string) {
         <div class="grid two-col">
           <div>
             <label class="field-label">画面</label>
-            <el-textarea v-model="shot.scene" :rows="2" />
+            <el-input type="textarea" v-model="shot.scene" :rows="2" />
           </div>
           <div>
             <label class="field-label">运镜</label>
@@ -585,7 +616,7 @@ function updateHashtags(value: string) {
         <el-input v-model="shot.on_screen" maxlength="18" show-word-limit />
         <details>
           <summary>查看 / 编辑 Prompt</summary>
-          <el-textarea v-model="shot.prompt" :rows="4" class="prompt-input" />
+          <el-input type="textarea" v-model="shot.prompt" :rows="4" class="prompt-input" />
         </details>
       </div>
 
@@ -618,11 +649,25 @@ function updateHashtags(value: string) {
 
         <section class="panel">
           <h2 class="panel-title">{{ frameLabel }}</h2>
+          <p class="hint">场景、光线、色板由当前风格的场景基准统一约束；单张不满意可以改提示词后只重生成这一张。</p>
           <div class="keyframe-grid">
             <div v-for="shot in script.shots" :key="shot.id" class="keyframe-card">
-              <img v-if="shot.keyframe_path" :src="mediaUrl(shot.keyframe_path)" :alt="`镜头 ${shot.idx}`" />
+              <img v-if="shot.keyframe_path" :src="frameSrc(shot.keyframe_path)" :alt="`镜头 ${shot.idx}`" />
               <div v-else class="keyframe-empty">待生成</div>
               <span>#{{ String(shot.idx).padStart(2, '0') }} · {{ shot.seconds }}s</span>
+              <details class="shot-tune">
+                <summary>调整这一张</summary>
+                <el-input v-model="shot.scene" type="textarea" :rows="2" placeholder="画面描述" />
+                <el-input v-model="shot.prompt" type="textarea" :rows="2" placeholder="补充提示词（会追加到分镜 prompt）" />
+                <button
+                  class="btn btn-small"
+                  type="button"
+                  :disabled="busy"
+                  @click="regenerateShot(shot)"
+                >
+                  {{ regeneratingShot === shot.id ? '生成中…' : '只重生成这张' }}
+                </button>
+              </details>
             </div>
           </div>
         </section>
@@ -915,14 +960,40 @@ summary {
 }
 
 .keyframe-card span {
-  position: absolute;
-  left: 6px;
-  bottom: 6px;
+  display: inline-block;
+  margin: 6px;
   padding: 3px 6px;
   border-radius: 6px;
   background: rgba(0, 0, 0, 0.6);
   color: #fff;
   font-size: 10px;
+}
+
+.shot-tune {
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.shot-tune[open] {
+  display: grid;
+  gap: 6px;
+}
+
+.shot-tune summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.shot-tune .btn,
+.shot-tune .el-textarea {
+  width: 100%;
+}
+
+.btn-small {
+  padding: 6px 10px;
+  font-size: 12px;
 }
 
 .video-result {

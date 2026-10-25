@@ -226,6 +226,7 @@ export const api = {
       { method: 'POST' },
     ),
   downloadUrl: (exportId: string) => `/api/exports/${exportId}/download`,
+  videoDownloadUrl: (videoId: string) => `/api/videos/${videoId}/download`,
 
   settings: () => request<SettingsInfo>('/settings'),
   updateSettings: (payload: {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { api, formatDate, mediaUrl, type ProjectDetail } from '../api'
+import { api, formatDate, mediaUrl, type ProjectDetail, type Shot } from '../api'
 import { generationStatus, platformLabel, projectStatus } from '../ui'
 import GenerationProgress from '../components/GenerationProgress.vue'
 
@@ -11,11 +11,14 @@ const detail = ref<ProjectDetail | null>(null)
 const loading = ref(true)
 const busy = ref(false)
 const exporting = ref(false)
+const regeneratingShot = ref('')
+const imageVersion = ref(0)
 let pollTimer: number | undefined
+let lastGenStatus = ''
 
 const firstKeyframe = computed(() => {
   const shot = detail.value?.script?.shots.find((item) => item.keyframe_path)
-  return shot?.keyframe_path ? mediaUrl(shot.keyframe_path) : ''
+  return shot?.keyframe_path ? `${mediaUrl(shot.keyframe_path)}?v=${imageVersion.value}` : ''
 })
 
 const showProgress = computed(() => {
@@ -31,6 +34,14 @@ const brief = computed(() => detail.value?.product?.brief || {})
 async function load(silent = false) {
   try {
     detail.value = await api.project(props.id)
+    const generation = detail.value?.latest_generation
+    if (generation?.status === 'succeeded' && lastGenStatus === 'running') {
+      imageVersion.value += 1
+    }
+    lastGenStatus = generation?.status || ''
+    if (generation && generation.status !== 'running' && generation.status !== 'queued') {
+      regeneratingShot.value = ''
+    }
     schedulePoll()
   } catch (error) {
     if (!silent) ElMessage.error((error as Error).message)
@@ -51,13 +62,26 @@ async function startPrevis() {
   if (!script.value) return
   busy.value = true
   try {
-    detail.value!.latest_generation = await api.previs(script.value.id)
+    detail.value!.latest_generation = await api.previs(script.value.id, !!firstKeyframe.value)
     schedulePoll()
-    ElMessage.success('预演任务已开始')
+    ElMessage.success('分镜图任务已开始')
   } catch (error) {
     ElMessage.error((error as Error).message)
   } finally {
     busy.value = false
+  }
+}
+
+async function regenerateShot(shot: Shot) {
+  if (!script.value) return
+  regeneratingShot.value = shot.id
+  try {
+    detail.value!.latest_generation = await api.regenerateShot(shot.id)
+    schedulePoll()
+    ElMessage.success(`#${shot.idx} 分镜任务已开始`)
+  } catch (error) {
+    ElMessage.error((error as Error).message)
+    regeneratingShot.value = ''
   }
 }
 
@@ -197,6 +221,12 @@ onUnmounted(() => {
             <router-link v-if="!script" class="btn btn-primary" to="/projects/new">
               去生成脚本
             </router-link>
+            <router-link v-if="script" class="btn" :to="`/projects/new?project=${id}`">
+              编辑脚本 / 分镜
+            </router-link>
+            <a v-if="video" class="btn" :href="api.videoDownloadUrl(video.id)" download>
+              下载 MP4
+            </a>
           </div>
 
           <div class="divider" />
@@ -229,7 +259,11 @@ onUnmounted(() => {
         <div class="shot-list">
           <article v-for="shot in script.shots" :key="shot.id" class="shot-row">
             <div class="shot-thumb">
-              <img v-if="shot.keyframe_path" :src="mediaUrl(shot.keyframe_path)" :alt="`镜头 ${shot.idx}`" />
+              <img
+                v-if="shot.keyframe_path"
+                :src="`${mediaUrl(shot.keyframe_path)}?v=${imageVersion}`"
+                :alt="`镜头 ${shot.idx}`"
+              />
               <span v-else>{{ String(shot.idx).padStart(2, '0') }}</span>
             </div>
             <div class="shot-body">
@@ -247,6 +281,15 @@ onUnmounted(() => {
             <div class="shot-status">
               <span class="dot" :class="shot.status" />
               {{ shot.status === 'video_ready' ? '已出片' : shot.keyframe_path ? '分镜图' : '待生成' }}
+              <button
+                v-if="script"
+                class="btn btn-small"
+                type="button"
+                :disabled="!!regeneratingShot"
+                @click="regenerateShot(shot)"
+              >
+                {{ regeneratingShot === shot.id ? '生成中…' : '重生成' }}
+              </button>
             </div>
           </article>
         </div>

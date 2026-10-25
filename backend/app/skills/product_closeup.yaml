@@ -46,3 +46,11 @@ copy:
   detail: ["细节经得起看：{scene_short}", "做工和用料，都在细节里"]
   usage: ["用起来，是一种享受", "慢一点，感受{sp1}"]
   cta: ["喜欢的话，点下方看看", "链接在下面，慢慢挑"]
+
+scene_bible:
+  location: "深色石材台面的静物摄影台"
+  time_of_day: "studio"
+  props: ["深灰石材台面", "单支干花", "哑光背景板"]
+  lighting: "侧逆光扫过轮廓，柔光，暗部有层次"
+  grade: "低调，高对比，暖灰"
+  lens: "100mm 微距，极浅景深"
