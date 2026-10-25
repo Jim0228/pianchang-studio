@@ -107,6 +107,7 @@ def build_manifest(
         },
         "mode": settings.ai_mode,
         "video_provider": settings.video_provider_name,
+        "image_provider": settings.image_provider_name,
         "models": {
             "chat": settings.ark_chat_model,
             "vision": settings.ark_vision_model,
