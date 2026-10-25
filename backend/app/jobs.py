@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from .config import Settings
 from .db import SessionLocal
 from .models import Asset, Generation, Product, Project, Script, Shot, Skill, Video
+from .errors import AppError
 from .services.ffmpeg import concat, make_clip, normalize_video, probe
 from .services.keyframes import (
     ensure_ai_label,
@@ -19,6 +20,11 @@ from .services.keyframes import (
     generate_cover,
     generate_keyframe,
     generate_subtitle_png,
+)
+from .services.storyboard import (
+    build_storyboard_review,
+    build_video_prompt,
+    generate_storyboard,
 )
 from .utils import ensure_parent, get_font, json_dumps, json_loads, new_id, sha256_file
 
@@ -84,6 +90,97 @@ def _previs_one(project_id: str, script_id: str, shot_id: str, total: int, setti
         brief = json_loads(product.brief_json, {})
         config = json_loads(skill.config_json, {})
         generate_keyframe(session, settings, project, script, shot, config, brief, total)
+    finally:
+        session.close()
+
+
+def _storyboard_stage_enabled(settings: Settings) -> bool:
+    """真实模式下，预演产出 REST 分镜图；mock 模式仍用 Pillow 海报，保证零成本演示。"""
+    return settings.is_real and settings.image_provider_name == "rest"
+
+
+async def _storyboard_one(
+    project_id: str, script_id: str, shot_id: str, settings: Settings, *, force: bool = False
+) -> None:
+    session = SessionLocal()
+    try:
+        project = session.get(Project, project_id)
+        script = session.get(Script, script_id)
+        shot = session.get(Shot, shot_id)
+        if not (project and script and shot):
+            raise RuntimeError("分镜图数据不完整")
+        skill = session.get(Skill, script.skill_id)
+        product = session.query(Product).filter(Product.project_id == project_id).first()
+        if skill is None or product is None:
+            raise RuntimeError("分镜图缺少风格或商品档案")
+        await generate_storyboard(
+            session,
+            settings,
+            project,
+            script,
+            shot,
+            json_loads(skill.config_json, {}),
+            json_loads(product.brief_json, {}),
+            force=force,
+        )
+    finally:
+        session.close()
+
+
+async def _ensure_frame_one(
+    project_id: str,
+    script_id: str,
+    shot_id: str,
+    total: int,
+    settings: Settings,
+    *,
+    force: bool = False,
+) -> None:
+    """优先真实分镜图；失败时回退 Pillow 海报，不阻断整条链路。"""
+    if _storyboard_stage_enabled(settings):
+        last_exc: Exception | None = None
+        for attempt in range(2):
+            try:
+                await _storyboard_one(project_id, script_id, shot_id, settings, force=force)
+                return
+            except Exception as exc:  # noqa: BLE001
+                last_exc = exc
+                logger.warning("REST 分镜图第 %s 次失败：%s", attempt + 1, exc)
+                _record_shot_error(shot_id, str(exc))
+                if attempt == 0:
+                    await asyncio.sleep(5)
+        logger.error("REST 分镜图重试仍失败，回退 Pillow 海报：%s", last_exc)
+    await asyncio.to_thread(_previs_one, project_id, script_id, shot_id, total, settings)
+
+
+def _record_shot_error(shot_id: str, message: str) -> None:
+    session = SessionLocal()
+    try:
+        shot = session.get(Shot, shot_id)
+        if shot is not None:
+            shot.error = message[:500]
+            session.commit()
+    finally:
+        session.close()
+
+
+def _storyboard_review_one(project_id: str, script_id: str, settings: Settings) -> dict:
+    session = SessionLocal()
+    try:
+        project = session.get(Project, project_id)
+        script = session.get(Script, script_id)
+        product = session.query(Product).filter(Product.project_id == project_id).first()
+        if not (project and script and product):
+            raise RuntimeError("分镜审核数据不完整")
+        skill = session.get(Skill, script.skill_id)
+        return build_storyboard_review(
+            session,
+            settings,
+            project,
+            script,
+            json_loads(skill.config_json, {}) if skill else {},
+            json_loads(product.brief_json, {}),
+        )
     finally:
         session.close()
 
@@ -252,6 +349,10 @@ async def _mcp_clip_one(project_id: str, script_id: str, shot_id: str, settings:
         shot = session.get(Shot, shot_id)
         if not (project and script and shot):
             raise RuntimeError("镜头数据不完整")
+        existing_clip = session.get(Asset, shot.clip_asset_id) if shot.clip_asset_id else None
+        if existing_clip is not None and (settings.data_path / existing_clip.path).exists():
+            logger.info("镜头 %s 已有成片，复用 %s", shot.idx, existing_clip.path)
+            return
         subtitle = session.get(Asset, shot.subtitle_asset_id) if shot.subtitle_asset_id else None
         if subtitle is None:
             subtitle = generate_subtitle_png(session, settings, project, shot)
@@ -265,37 +366,39 @@ async def _mcp_clip_one(project_id: str, script_id: str, shot_id: str, settings:
         original_paths = [settings.data_path / asset.path for asset in originals]
         subtitle_path = settings.data_path / subtitle.path if subtitle else None
         ratio = script.ratio
+        skill = session.get(Skill, script.skill_id)
+        config = json_loads(skill.config_json, {}) if skill else {}
+        prompt = build_video_prompt(shot, config)
+        keyframe = session.get(Asset, shot.keyframe_asset_id) if shot.keyframe_asset_id else None
+        first_frame = settings.data_path / keyframe.path if keyframe else None
+        if first_frame is not None and not first_frame.exists():
+            first_frame = None
+        shot_idx = shot.idx
+        seconds = float(shot.seconds)
     finally:
         session.close()
 
-    plate = await _ensure_plate_for(project_id, script_id, shot_id, settings)
-    plate_path = settings.data_path / plate.path
-
-    prompt = (
-        "Use the first provided image as the exact first frame. "
-        f"{shot.prompt} "
-        "Keep the product's shape, proportions, color, material, label, logo and composition unchanged. "
-        "Only add subtle camera movement and natural light motion. "
-        "Photorealistic e-commerce commercial quality, no text, no letters, no watermark, no extra objects."
-    )
-    raw_path = settings.data_path / "projects" / project_id / "clips" / f"mcp_{shot.idx:02d}.mp4"
+    if first_frame is None:
+        plate = await _ensure_plate_for(project_id, script_id, shot_id, settings)
+        first_frame = settings.data_path / plate.path
+    raw_path = settings.data_path / "projects" / project_id / "clips" / f"mcp_{shot_idx:02d}.mp4"
     client = McpClient(settings)
     info = await client.generate_video(
         prompt,
-        [plate_path, *original_paths],
+        [first_frame, *original_paths],
         raw_path,
-        seconds=float(shot.seconds),
+        seconds=seconds,
         ratio=ratio,
     )
 
     label_path = ensure_ai_label(settings, settings.video_width, settings.video_height)
-    final_path = settings.data_path / "projects" / project_id / "clips" / f"shot_{shot.idx:02d}.mp4"
+    final_path = settings.data_path / "projects" / project_id / "clips" / f"shot_{shot_idx:02d}.mp4"
     probe_info = await asyncio.to_thread(
         normalize_video,
         settings,
         raw_path,
         final_path,
-        seconds=float(shot.seconds),
+        seconds=seconds,
         width=settings.video_width,
         height=settings.video_height,
         fps=settings.fps,
@@ -318,7 +421,7 @@ async def _mcp_clip_one(project_id: str, script_id: str, shot_id: str, settings:
             sha256=sha256_file(final_path),
             meta_json=json_dumps(
                 {
-                    "shot_idx": shot.idx,
+                    "shot_idx": shot_idx,
                     "mode": "mcp",
                     "job_id": info.get("job_id"),
                     "source_url": info.get("url"),
@@ -345,6 +448,10 @@ async def _rest_clip_one(project_id: str, script_id: str, shot_id: str, settings
         shot = session.get(Shot, shot_id)
         if not (project and script and shot):
             raise RuntimeError("镜头数据不完整")
+        existing_clip = session.get(Asset, shot.clip_asset_id) if shot.clip_asset_id else None
+        if existing_clip is not None and (settings.data_path / existing_clip.path).exists():
+            logger.info("镜头 %s 已有成片，复用 %s", shot.idx, existing_clip.path)
+            return
         subtitle = session.get(Asset, shot.subtitle_asset_id) if shot.subtitle_asset_id else None
         if subtitle is None:
             subtitle = generate_subtitle_png(session, settings, project, shot)
@@ -358,30 +465,33 @@ async def _rest_clip_one(project_id: str, script_id: str, shot_id: str, settings
         original_paths = [settings.data_path / asset.path for asset in originals]
         subtitle_path = settings.data_path / subtitle.path if subtitle else None
         ratio = script.ratio
+        skill = session.get(Skill, script.skill_id)
+        config = json_loads(skill.config_json, {}) if skill else {}
+        prompt = build_video_prompt(shot, config)
+        keyframe = session.get(Asset, shot.keyframe_asset_id) if shot.keyframe_asset_id else None
+        first_frame = settings.data_path / keyframe.path if keyframe else None
+        if first_frame is not None and not first_frame.exists():
+            first_frame = None
+        shot_idx = shot.idx
+        seconds = float(shot.seconds)
     finally:
         session.close()
 
-    plate = await _ensure_plate_for(project_id, script_id, shot_id, settings)
-    plate_path = settings.data_path / plate.path
-    prompt = (
-        "Use the first provided image as the exact first frame. "
-        f"{shot.prompt} "
-        "Keep the product's shape, proportions, color, material, label, logo and composition unchanged. "
-        "Only add subtle camera movement and natural light motion. "
-        "Photorealistic e-commerce commercial quality, no text, no letters, no watermark, no extra objects."
-    )
-    raw_path = settings.data_path / "projects" / project_id / "clips" / f"rest_{shot.idx:02d}.mp4"
+    if first_frame is None:
+        plate = await _ensure_plate_for(project_id, script_id, shot_id, settings)
+        first_frame = settings.data_path / plate.path
+    raw_path = settings.data_path / "projects" / project_id / "clips" / f"rest_{shot_idx:02d}.mp4"
     client = RestArtClient(settings)
     info = await client.generate_video(
         prompt,
-        [plate_path, *original_paths],
+        [first_frame, *original_paths],
         raw_path,
-        seconds=float(shot.seconds),
+        seconds=seconds,
         ratio=ratio,
     )
 
     label_path = ensure_ai_label(settings, settings.video_width, settings.video_height)
-    final_path = settings.data_path / "projects" / project_id / "clips" / f"shot_{shot.idx:02d}.mp4"
+    final_path = settings.data_path / "projects" / project_id / "clips" / f"shot_{shot_idx:02d}.mp4"
     probe_info = await asyncio.to_thread(
         normalize_video,
         settings,
@@ -539,9 +649,12 @@ async def _real_clip_one(project_id: str, script_id: str, shot_id: str, settings
         session.close()
 
 
-async def run_previs(generation_id: str, script_id: str, settings: Settings) -> None:
+async def run_previs(
+    generation_id: str, script_id: str, settings: Settings, *, force: bool = False
+) -> None:
     project_id: str | None = None
     keyframe_ark = settings.image_provider_name == "ark"
+    storyboard_stage = _storyboard_stage_enabled(settings)
     session = SessionLocal()
     try:
         script = session.get(Script, script_id)
@@ -552,7 +665,12 @@ async def run_previs(generation_id: str, script_id: str, settings: Settings) -> 
         shots = session.query(Shot).filter(Shot.script_id == script_id).order_by(Shot.idx.asc()).all()
         shot_ids = [shot.id for shot in shots]
         total = len(shot_ids)
-        _update_generation(generation_id, status="running", progress=3, message="准备关键帧")
+        _update_generation(
+            generation_id,
+            status="running",
+            progress=3,
+            message="准备分镜图" if storyboard_stage else "准备关键帧",
+        )
         if project:
             project.status = "previs_running"
             session.commit()
@@ -560,19 +678,30 @@ async def run_previs(generation_id: str, script_id: str, settings: Settings) -> 
         session.close()
 
     try:
+        label = "分镜图" if storyboard_stage else "关键帧"
         for index, shot_id in enumerate(shot_ids, start=1):
             if keyframe_ark:
                 await _real_keyframe_one(project_id, script_id, shot_id, total, settings)
             else:
-                await asyncio.to_thread(_previs_one, project_id, script_id, shot_id, total, settings)
+                await _ensure_frame_one(project_id, script_id, shot_id, total, settings, force=force)
             progress = 5 + int(85 * index / max(1, total))
-            _update_generation(generation_id, progress=progress, message=f"已生成关键帧 {index}/{total}")
+            _update_generation(generation_id, progress=progress, message=f"已生成{label} {index}/{total}")
+
+        result: dict = {"script_id": script_id, "keyframes": total}
+        if storyboard_stage:
+            _update_generation(generation_id, progress=95, message="正在合成分镜联系表")
+            review = await asyncio.to_thread(_storyboard_review_one, project_id, script_id, settings)
+            result = {
+                "script_id": script_id,
+                "storyboards": total,
+                "contact_sheet": review.get("contact_sheet"),
+            }
         _update_generation(
             generation_id,
             status="succeeded",
             progress=100,
-            message="关键帧已生成",
-            result={"script_id": script_id, "keyframes": total},
+            message=f"{label}已生成",
+            result=result,
         )
         session = SessionLocal()
         try:
@@ -586,10 +715,37 @@ async def run_previs(generation_id: str, script_id: str, settings: Settings) -> 
         _fail(generation_id, project_id, exc)
 
 
+async def _run_clip(
+    provider: str, project_id: str, script_id: str, shot_id: str, settings: Settings
+) -> None:
+    """单镜生成，失败重试一次（网关排队与瞬时错误很常见）。"""
+    last_exc: Exception | None = None
+    for attempt in range(2):
+        try:
+            if provider == "rest":
+                await _rest_clip_one(project_id, script_id, shot_id, settings)
+            elif provider == "mcp":
+                await _mcp_clip_one(project_id, script_id, shot_id, settings)
+            elif provider == "seedance":
+                await _real_clip_one(project_id, script_id, shot_id, settings)
+            else:
+                await asyncio.to_thread(_clip_one, project_id, script_id, shot_id, settings)
+            return
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            logger.warning("镜头 %s 第 %s 次生成失败：%s", shot_id, attempt + 1, exc)
+            _record_shot_error(shot_id, str(exc))
+            if attempt == 0:
+                await asyncio.sleep(8)
+    if last_exc is not None:
+        raise last_exc
+
+
 async def run_render(generation_id: str, script_id: str, settings: Settings) -> None:
     project_id: str | None = None
     keyframe_ark = settings.image_provider_name == "ark"
     provider = settings.video_provider_name
+    storyboard_stage = _storyboard_stage_enabled(settings)
     session = SessionLocal()
     try:
         script = session.get(Script, script_id)
@@ -612,24 +768,46 @@ async def run_render(generation_id: str, script_id: str, settings: Settings) -> 
             if keyframe_ark:
                 await _real_keyframe_one(project_id, script_id, shot_id, total, settings)
             else:
-                await asyncio.to_thread(_previs_one, project_id, script_id, shot_id, total, settings)
-            _update_generation(generation_id, progress=5 + int(20 * index / max(1, total)), message=f"校准关键帧 {index}/{total}")
-
-        for index, shot_id in enumerate(shot_ids, start=1):
-            await asyncio.to_thread(_subtitle_one, project_id, shot_id, settings)
-            if provider == "rest":
-                await _rest_clip_one(project_id, script_id, shot_id, settings)
-            elif provider == "mcp":
-                await _mcp_clip_one(project_id, script_id, shot_id, settings)
-            elif provider == "seedance":
-                await _real_clip_one(project_id, script_id, shot_id, settings)
-            else:
-                await asyncio.to_thread(_clip_one, project_id, script_id, shot_id, settings)
+                await _ensure_frame_one(project_id, script_id, shot_id, total, settings)
             _update_generation(
                 generation_id,
-                progress=25 + int(60 * index / max(1, total)),
-                message=f"已生成镜头 {index}/{total}",
+                progress=5 + int(20 * index / max(1, total)),
+                message=f"校准{'分镜图' if storyboard_stage else '关键帧'} {index}/{total}",
             )
+
+        for shot_id in shot_ids:
+            await asyncio.to_thread(_subtitle_one, project_id, shot_id, settings)
+
+        # REST 视频单镜排队 2-15 分钟，串行会拖到半小时以上；限流并发 2 路。
+        if provider == "rest" and total > 1:
+            semaphore = asyncio.Semaphore(2)
+            done = 0
+            counter_lock = asyncio.Lock()
+
+            async def worker(sid: str) -> None:
+                nonlocal done
+                async with semaphore:
+                    await _run_clip(provider, project_id, script_id, sid, settings)
+                async with counter_lock:
+                    done += 1
+                    _update_generation(
+                        generation_id,
+                        progress=25 + int(60 * done / max(1, total)),
+                        message=f"已生成镜头 {done}/{total}",
+                    )
+
+            results = await asyncio.gather(*(worker(sid) for sid in shot_ids), return_exceptions=True)
+            failures = [item for item in results if isinstance(item, BaseException)]
+            if failures:
+                raise failures[0]
+        else:
+            for index, shot_id in enumerate(shot_ids, start=1):
+                await _run_clip(provider, project_id, script_id, shot_id, settings)
+                _update_generation(
+                    generation_id,
+                    progress=25 + int(60 * index / max(1, total)),
+                    message=f"已生成镜头 {index}/{total}",
+                )
 
         session = SessionLocal()
         try:

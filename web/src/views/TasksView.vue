@@ -40,7 +40,7 @@ function openProject(row: Generation) {
       <div>
         <p class="eyebrow">TASK CENTER</p>
         <h1 class="page-title">任务中心</h1>
-        <p class="page-sub">关键帧、成片与脚本任务都在这里。任务在后台执行，离开页面不会中断。</p>
+        <p class="page-sub">分镜图、成片与脚本任务都在这里。任务在后台执行，离开页面不会中断。</p>
       </div>
       <button class="btn" type="button" @click="load">
         <el-icon><Refresh /></el-icon>

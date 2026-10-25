@@ -408,20 +408,23 @@ def edit_script(script_id: str, payload: ScriptPatch, db: Session = Depends(get_
 @router.post("/scripts/{script_id}/previs")
 async def start_previs(
     script_id: str,
+    force: bool = False,
     db: Session = Depends(get_db),
     settings: Settings = Depends(get_settings),
 ):
     script = db.get(Script, script_id)
     if script is None:
         raise AppError("NOT_FOUND", "脚本不存在", status_code=404)
+    if force and settings.image_provider_name == "rest" and not settings.rest_art_configured:
+        raise AppError("REST_NOT_CONFIGURED", "重新生成分镜图需要配置 REST_ART_BASE_URL / REST_ART_TOKEN", status_code=400)
     generation = Generation(id=new_id("gen"), project_id=script.project_id, stage="previs", status="queued")
     db.add(generation)
     db.commit()
     db.refresh(generation)
     if settings.sync_jobs:
-        await run_previs(generation.id, script.id, settings)
+        await run_previs(generation.id, script.id, settings, force=force)
     else:
-        asyncio.create_task(run_previs(generation.id, script.id, settings))
+        asyncio.create_task(run_previs(generation.id, script.id, settings, force=force))
     db.refresh(generation)
     return _generation_dict(generation)
 

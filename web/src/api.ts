@@ -212,7 +212,8 @@ export const api = {
   script: (id: string) => request<Script>(`/scripts/${id}`),
   patchScript: (id: string, body: Record<string, any>) =>
     request<Script>(`/scripts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
-  previs: (id: string) => request<Generation>(`/scripts/${id}/previs`, { method: 'POST' }),
+  previs: (id: string, force = false) =>
+    request<Generation>(`/scripts/${id}/previs?force=${force ? 'true' : 'false'}`, { method: 'POST' }),
   render: (id: string) => request<Generation>(`/scripts/${id}/render`, { method: 'POST' }),
   regenerateShot: (id: string) => request<Generation>(`/shots/${id}/regenerate`, { method: 'POST' }),
   generation: (id: string) => request<Generation>(`/generations/${id}`),

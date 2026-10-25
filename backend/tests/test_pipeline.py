@@ -6,7 +6,13 @@ import zipfile
 
 from PIL import Image, ImageDraw
 
+from backend.app.models import Shot
 from backend.app.services.compliance import check_text
+from backend.app.services.storyboard import (
+    IDENTITY_LOCK,
+    build_storyboard_prompt,
+    build_video_prompt,
+)
 
 
 def make_product_image() -> bytes:
@@ -141,3 +147,39 @@ def test_compliance_does_not_flag_last():
     hits = check_text("全网最好用，100%有效", "caption")
     assert any(item["word"] == "最好" for item in hits)
     assert any(item["level"] == "block" for item in hits)
+
+
+def test_storyboard_prompt_locks_identity_and_bans_text():
+    shot = Shot(
+        idx=2,
+        scene="浴室台面上的白色电动牙刷特写",
+        camera="缓慢推近",
+        prompt="真实商业摄影质感，浅景深",
+    )
+    brief = {
+        "title": "声波电动牙刷",
+        "category": "个护",
+        "product_visual": {"body_color": "white", "screen": "black round display"},
+    }
+    config = {
+        "prompt": {
+            "style": "Photorealistic e-commerce commercial photography",
+            "lighting": "soft morning window light",
+            "negative": "no extra products, no deformed label",
+            "palette": ["#F6F1E7", "#2E2A26"],
+        }
+    }
+
+    prompt = build_storyboard_prompt(shot, brief, config, "9:16")
+    assert IDENTITY_LOCK in prompt
+    assert "white" in prompt and "black round display" in prompt
+    assert "浴室台面上的白色电动牙刷特写" in prompt
+    assert "no text" in prompt.lower()
+    assert "no extra products" in prompt
+    assert "9:16" in prompt
+
+    video = build_video_prompt(shot, config)
+    assert "exact first frame" in video
+    assert "缓慢推近" in video
+    assert "no morphing" in video
+

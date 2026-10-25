@@ -86,6 +86,8 @@ class DeepSeekClient:
             "结构：{title, shots:[{idx,seconds,beat,scene,camera,action,voiceover,on_screen,prompt}], "
             "cover:{title,subtitle}, caption:{title,body,hashtags:[...]}, style_bible:{...}}。"
             f"镜头数 4-6，总时长必须等于 {duration} 秒；on_screen<=18字；voiceover<=40字。"
+            "scene/action 只写画面：商品 + 场景/道具 + 光线/运镜；全片必须是同一款、同一颜色的商品，"
+            "每个画面只出现一件商品；不写人物、手部、文字、价格牌、认证标志、销量、第二名商品。"
             "不得虚构参数、功效、销量、认证；不得使用绝对化用语。只输出 JSON。"
         )
         user = json.dumps(

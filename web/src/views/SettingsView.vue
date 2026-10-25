@@ -156,10 +156,10 @@ async function testRest() {
         </el-radio-group>
         <p class="mode-note provider-note">
           <template v-if="imageProvider === 'rest'">
-            REST 图片生成用于成片场景板：按镜头生成干净的商品场景，再交给视频模型做图生视频。
+            REST 图片生成用于分镜图：按镜头生成无文字的商品分镜图（首帧），再交给视频模型做图生视频。
           </template>
-          <template v-else-if="imageProvider === 'ark'">Ark Seedream 生成关键帧；需要 ARK_API_KEY。</template>
-          <template v-else>Pillow 本地合成场景板，不调用外部图片模型。</template>
+          <template v-else-if="imageProvider === 'ark'">Ark Seedream 生成分镜图；需要 ARK_API_KEY。</template>
+          <template v-else>Pillow 本地合成海报，不调用外部图片模型。</template>
         </p>
         <el-alert
           v-if="imageProvider === 'rest' && !settings.rest_art_configured"
@@ -181,7 +181,7 @@ async function testRest() {
         </el-radio-group>
         <p class="mode-note provider-note">
           <template v-if="provider === 'rest'">
-            REST 图生视频：场景板 + 原图 → 4 秒片段 → 归一化 1080×1920 → 字幕/AI 标识。
+            REST 图生视频：分镜图 + 原图 → 4 秒片段 → 归一化 1080×1920 → 字幕/AI 标识。
           </template>
           <template v-else-if="provider === 'mcp'">MCP 图生视频（保留为回退）。</template>
           <template v-else-if="provider === 'seedance'">火山方舟 Seedance；需要 ARK_API_KEY。</template>

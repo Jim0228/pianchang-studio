@@ -1,8 +1,8 @@
 # 片场 Studio · AI 电商短视频工作台
 
-输入产品图 + 商品描述，选择视频风格 Skill，自动生成脚本、分镜、关键帧与平台成片。视频优先，图片与文案作为支撑。
+输入产品图 + 商品描述，选择视频风格 Skill，自动生成脚本、分镜图与平台成片。视频优先，图片与文案作为支撑。
 
-当前版本：**v0.2：DeepSeek LLM + REST 图片/视频生成（MCP 保留回退）**
+当前版本：**v0.3：商品图 + 描述 → 脚本 → 分镜图 → 图生视频全链路（DeepSeek + REST）**
 技术栈：Vue 3 + TypeScript + Vite + Element Plus ｜ Python 3.12 + FastAPI + SQLite ｜ Pillow + FFmpeg ｜ DeepSeek ｜ REST 美术资源
 
 ---
@@ -14,14 +14,16 @@
 - 按品类、目标、平台推荐 Top3 风格，并给出理由。
 - 生成结构化脚本与 4–6 个分镜，总时长严格等于 15 秒。
 - 分镜可编辑：画面、运镜、口播、字幕、时长、Prompt。
-- 预演：逐镜生成关键帧（Pillow，商品图合成、AI 标识）。
-- 成片：FFmpeg 生成动态镜头、烧录字幕、拼接、生成封面，输出 1080×1920 / 30fps MP4。
+- **分镜图**：真实模式逐镜调用 REST 图片模型，按「商品锁定 + 风格锚点 + 负向词」生成 9:16 无文字分镜图，并输出联系表 `contact_sheet.jpg` 与 `review.json` 人工核对；Mock 模式回退 Pillow 海报。
+- **成片**：以分镜图为首帧做图生视频；FFmpeg 统一 1080×1920 / 30fps、烧字幕、加 AI 标识、拼接、生成封面。
 - 导出 ZIP：MP4、封面、脚本 JSON、SRT、发布文案、manifest。
 - 合规检查：极限词/功效词扫描，结果写入 manifest。
 - Mock / Real 双模式；真实能力由 LLM / 图片 / 视频三个 provider 决定。
 - **DeepSeek LLM**：商品解析、脚本与分镜生成。
-- **REST 图生视频**：REST `video_generate` 生成镜头，自动归一化、烧字幕、加 AI 标识。
-- **REST 图片生成**：REST `image_generate` 生成每镜无文字场景板，失败回退 Pillow。
+- **REST 图生视频**：REST `video_generate` 以分镜图为首帧生成镜头，自动归一化、烧字幕、加 AI 标识。
+- **REST 图片生成**：REST `image_generate` 生成每镜无文字分镜图，失败回退 Pillow。
+- 单镜失败自动重试一次；REST 镜头限流并发 2 路，5 镜成片从串行 30 分钟压到约 10–20 分钟。
+- 已生成的分镜图与镜头会复用，重跑渲染不会重复花钱；点「重新生成」才会覆盖。
 - MCP 视频保留为回退；Seedance 与 Ark 仍可选。
 - 项目历史、任务中心、设置页、运行环境自检。
 
@@ -99,6 +101,27 @@ Vite 会把 `/api` 与 `/media` 代理到 8000。
 4. **预演成片**：查看关键帧；确认后点「生成成片」；完成后导出 ZIP。
 
 所有生成任务在后台执行，离开页面不会中断；任务中心可查看进度。
+
+### 一条命令跑通（不打开页面）
+
+```powershell
+.\.venv\Scripts\python.exe scripts\pipeline.py `
+  --image data\产品图.jpg `
+  --name "声波电动牙刷" `
+  --description "白色机身，五档模式，IPX7 防水，续航 30 天，128 元"
+```
+
+一次跑完：建项目 → 上传图 → DeepSeek 解析 → 推荐风格 → 生成脚本 → 逐镜分镜图 → 图生视频 → 拼成片。
+常用参数：
+
+| 参数 | 说明 |
+|---|---|
+| `--no-video` | 只跑到分镜图，先看联系表再决定是否出片 |
+| `--script-id scr_xxx` | 从已有脚本续跑，分镜图与成片复用已生成结果 |
+| `--style pain_point_reversal` | 指定风格，默认自动推荐 Top1 |
+| `--mock` | 零成本自检，不调外部模型 |
+
+产物：`data/projects/<id>/storyboards/`（分镜图 + 联系表 + review.json）、`clips/`、`videos/`、`covers/`，摘要写入 `data/pipeline_last.json`。
 
 ---
 
@@ -189,10 +212,10 @@ backend/
     models.py            9 张表
     schemas.py           请求模型
     api.py               REST 路由
-    jobs.py              预演 / 渲染 / 真实模式分支
+    jobs.py              分镜图 / 渲染 / 真实模式分支
     skills/*.yaml        6 个视频风格
     presets/platforms.yaml
-    services/            解析、推荐、脚本、关键帧、FFmpeg、打包、合规
+    services/            解析、推荐、脚本、分镜、关键帧、FFmpeg、打包、合规
     services/providers/  DeepSeek / REST Art / Ark / Seedance / MCP
   tests/                 pytest
 web/
@@ -200,6 +223,7 @@ web/
   src/components/        SkillCard、GenerationProgress
   src/api.ts             类型化 API 封装
 scripts/
+  pipeline.py            一条命令跑完 商品图+描述 → 分镜图 → 成片
   smoke.py               端到端 Mock 冒烟
   rest_art.py            REST 图片/视频调用验证
   deepseek_rest_test.py  DeepSeek + REST 单镜集成测试
@@ -252,6 +276,17 @@ data/                    运行时生成（数据库、素材、导出）
 - 单镜完整链路：DeepSeek 脚本 → REST `image_generate` 场景板 → REST `video_generate` → 3.0s / 1080×1920 / 30fps
 - 5 镜 REST 成片由 `scripts/render_rest.py` 后台生成到 `data/demo_rest/`；网关排队下单镜可能 2–15 分钟，完整 5 镜可能 30 分钟以上
 
+**v0.3 全链路实测（声波电动牙刷，商品图 + 描述 → 分镜图 → 成片）**
+
+- 单条命令：`scripts/pipeline.py --image 牙刷图.jpg --name 声波电动牙刷 --description ...`
+- 商品解析 2.2s（DeepSeek）→ 脚本 7.0s（5 镜 / 15s）→ 分镜图 276s（5 张 REST 图 + 联系表）→ 成片 465s（5 镜并发 2 路）
+- 产物：`data/projects/prj_d294af2c679d/`
+  - `storyboards/`：5 张 1080×1920 分镜图、`contact_sheet.jpg` 联系表、`review.json` 审核清单
+  - `clips/`：5 条 1080×1920 / 30fps 镜头（烧字幕 + AI 标识）
+  - `videos/scr_7561734288f0.mp4`：15.03s / 1080×1920 / 30fps / 含音轨
+  - `covers/cover.jpg`：封面（无叠字）
+  - `exports/`：ZIP（MP4 + 封面 + 脚本 + SRT + 文案 + manifest）
+
 ---
 
 ## API 速览
@@ -268,7 +303,7 @@ data/                    运行时生成（数据库、素材、导出）
 | POST | `/api/skills/recommend` | 推荐 Top3 |
 | POST | `/api/projects/{id}/scripts` | 生成脚本 |
 | PATCH | `/api/scripts/{id}` | 编辑脚本/分镜 |
-| POST | `/api/scripts/{id}/previs` | 生成关键帧 |
+| POST | `/api/scripts/{id}/previs` | 生成分镜图（`?force=true` 强制重新生成） |
 | POST | `/api/scripts/{id}/render` | 生成成片 |
 | GET | `/api/generations/{id}` | 轮询任务 |
 | POST | `/api/videos/{id}/export` | 导出 ZIP |
@@ -278,21 +313,22 @@ data/                    运行时生成（数据库、素材、导出）
 
 ---
 
-## 已知限制（v0.2）
+## 已知限制（v0.3）
 
 - 只做抖音 9:16 / 15 秒；其他平台只有预设，尚未做变体渲染。
 - 不做 TTS 口播与 BGM；成片保留外部模型音轨或静音音轨。
-- DeepSeek 是文本模型，不上传商品图；图片细节依赖描述质量。
+- DeepSeek 是文本模型，不上传商品图；分镜图里的商品细节靠参考图 + 身份锁定句约束，仍可能漂移。
+- 分镜图单镜约 30–90 秒；5 镜串行 3–8 分钟，联系表需人工核对商品一致性。
 - REST 视频为 480p 上采样到 1080×1920；单镜最低 4 秒，短镜头裁切、长镜头补帧。
-- REST 图片输出约 941×1672，会裁切/缩放到 1080×1920。
-- REST 单镜耗时受网关排队影响，实测 2–15 分钟不等；5 镜串行可能 30 分钟以上。
+- REST 图片输出约 1102×1428（非精确 9:16），会中心裁切到 1080×1920。
+- REST 视频单镜耗时受网关排队影响，实测 2–15 分钟不等；已做 2 路并发，5 镜约 10–20 分钟。
 - 任务在进程内执行，服务重启会丢失运行中的任务。
 - 通配字体仅用于演示；正式商用请替换为 OFL/商用授权字体。
 - 未做登录、多用户与权限；默认仅本机使用。
 
 ## 下一步
 
-- v0.3：REST 任务 webhook、镜头并发、720p/1080p 原生输出、TTS/BGM、VLM 质检重试、多平台变体、SSE。
+- v0.4：分镜图人工审核门禁（不通过不进入视频）、VLM 一致性打分、REST 任务 webhook、720p/1080p 原生输出、TTS/BGM、多平台变体、SSE。
 - v1.0：批量项目、Skill 编辑器、成本看板、素材库。
 
 ---

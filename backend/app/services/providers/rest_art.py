@@ -44,12 +44,22 @@ class RestArtClient:
         timeout: float = 180.0,
     ) -> dict:
         try:
-            response = await client.post(
-                f"{self.base}{path}",
-                headers=self.headers,
-                json=payload,
-                timeout=timeout,
+            response = await asyncio.wait_for(
+                client.post(
+                    f"{self.base}{path}",
+                    headers=self.headers,
+                    json=payload,
+                    timeout=timeout,
+                ),
+                timeout=timeout + 30,
             )
+        except asyncio.TimeoutError as exc:
+            raise AppError(
+                "REST_ERROR",
+                f"REST 请求超时（{timeout + 30:.0f}s）：{path}",
+                status_code=504,
+                retryable=True,
+            ) from exc
         except httpx.HTTPError as exc:
             raise AppError("REST_ERROR", f"REST 请求失败：{exc}", status_code=502, retryable=True) from exc
         try:
@@ -124,16 +134,24 @@ class RestArtClient:
         if not url:
             raise AppError("REST_ERROR", "结果缺少下载地址", status_code=502)
         try:
-            response = await client.get(url, timeout=300.0, follow_redirects=True)
+            response = await asyncio.wait_for(
+                client.get(url, timeout=300.0, follow_redirects=True),
+                timeout=330.0,
+            )
             if response.status_code >= 400:
-                response = await client.get(
-                    url,
-                    headers={"Authorization": self.headers["Authorization"]},
-                    timeout=300.0,
-                    follow_redirects=True,
+                response = await asyncio.wait_for(
+                    client.get(
+                        url,
+                        headers={"Authorization": self.headers["Authorization"]},
+                        timeout=300.0,
+                        follow_redirects=True,
+                    ),
+                    timeout=330.0,
                 )
             response.raise_for_status()
             return response.content
+        except asyncio.TimeoutError as exc:
+            raise AppError("REST_ERROR", "下载生成结果超时", status_code=504, retryable=True) from exc
         except httpx.HTTPError as exc:
             raise AppError("REST_ERROR", f"下载结果失败：{exc}", status_code=502, retryable=True) from exc
 

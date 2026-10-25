@@ -332,6 +332,27 @@ def generate_subtitle_png(
     return asset
 
 
+def _clean_cover_base(settings: Settings, project: Project, width: int, height: int) -> Image.Image:
+    """封面底图：干净的渐变色 + 商品，不带任何烧录文字，避免和封面文案叠字。"""
+    palette = ["#F6F1E7", "#E8D9C5", "#2E2A26"]
+    image = _decorate(_gradient(width, height, palette), palette).convert("RGBA")
+    product = _product_image(settings, project.id)
+    if product is not None:
+        product.thumbnail((720, 800))
+        shadow = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+        shadow_draw = ImageDraw.Draw(shadow)
+        center_x = width // 2
+        center_y = int(height * 0.40)
+        shadow_draw.ellipse(
+            [center_x - 320, center_y + 360, center_x + 320, center_y + 520],
+            fill=(0, 0, 0, 70),
+        )
+        shadow = shadow.filter(ImageFilter.GaussianBlur(28))
+        image = Image.alpha_composite(image, shadow)
+        image.alpha_composite(product, (center_x - product.width // 2, center_y - product.height // 2))
+    return image
+
+
 def generate_cover(
     session: Session,
     settings: Settings,
@@ -345,10 +366,15 @@ def generate_cover(
     path = folder / "cover.jpg"
     ensure_parent(path)
 
-    if keyframe_asset is not None and (settings.data_path / keyframe_asset.path).exists():
+    source_is_clean = False
+    if keyframe_asset is not None:
+        meta = json.loads(keyframe_asset.meta_json or "{}")
+        source_is_clean = keyframe_asset.kind == "storyboard" or meta.get("mode") == "ark"
+
+    if source_is_clean and (settings.data_path / keyframe_asset.path).exists():
         image = Image.open(settings.data_path / keyframe_asset.path).convert("RGBA")
     else:
-        image = _gradient(width, height, ["#F6F1E7", "#E8D9C5"]).convert("RGBA")
+        image = _clean_cover_base(settings, project, width, height)
 
     overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(overlay)

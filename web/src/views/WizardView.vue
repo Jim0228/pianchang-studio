@@ -52,7 +52,22 @@ const displaySkills = computed(() => (recommendations.value.length ? recommendat
 const totalSeconds = computed(() =>
   (script.value?.shots || []).reduce((sum, shot) => sum + Number(shot.seconds || 0), 0),
 )
-const progressTitle = computed(() => (generation.value?.stage === 'render' ? '成片生成' : '关键帧预演'))
+const realStoryboard = computed(
+  () => store.settings?.ai_mode === 'real' && store.settings?.image_provider === 'rest',
+)
+const frameLabel = computed(() => (realStoryboard.value ? '分镜图' : '关键帧'))
+const frameHint = computed(() =>
+  realStoryboard.value
+    ? '真实模式会逐镜调用图片模型生成 9:16 分镜图，单镜约 30–90 秒；请先核对商品一致性，再生成成片。'
+    : 'Mock 模式下每镜约 1–3 秒，不调用外部模型。',
+)
+const progressTitle = computed(() =>
+  generation.value?.stage === 'render'
+    ? '成片生成'
+    : realStoryboard.value
+      ? '分镜图生成'
+      : '关键帧预演',
+)
 
 function normalizeScript(value: Script): Script {
   if (!value.caption) value.caption = {}
@@ -287,14 +302,14 @@ async function saveScript(showToast = true) {
   return script.value
 }
 
-async function startPrevis() {
+async function startPrevis(force = false) {
   if (!script.value) return
   busy.value = true
   try {
     busyText.value = '正在保存脚本…'
     await saveScript(false)
-    busyText.value = '正在生成关键帧…'
-    generation.value = await api.previs(script.value.id)
+    busyText.value = force ? `正在重新生成${frameLabel.value}…` : `正在生成${frameLabel.value}…`
+    generation.value = await api.previs(script.value.id, force)
     step.value = 3
     const final = await waitGeneration(generation.value.id, (item) => {
       generation.value = item
@@ -302,7 +317,7 @@ async function startPrevis() {
     if (final.status !== 'succeeded') throw new Error(final.error || '预演失败')
     script.value = normalizeScript(await api.script(script.value.id))
     previsReady.value = true
-    ElMessage.success('预演完成，可以生成成片了')
+    ElMessage.success(`${frameLabel.value}已就绪，可以生成成片了`)
   } catch (error) {
     ElMessage.error((error as Error).message)
   } finally {
@@ -369,7 +384,7 @@ function updateHashtags(value: string) {
       <div>
         <p class="eyebrow">NEW PROJECT</p>
         <h1 class="page-title">{{ projectId ? '继续创作' : '新建视频' }}</h1>
-        <p class="page-sub">四步完成：商品资料 → 视频风格 → 脚本分镜 → 预演与成片。所有操作都会自动保存。</p>
+        <p class="page-sub">四步完成：商品资料 → 视频风格 → 脚本分镜 → 分镜图与成片。所有操作都会自动保存。</p>
       </div>
       <div class="actions">
         <router-link class="btn btn-ghost" to="/">取消</router-link>
@@ -381,7 +396,7 @@ function updateHashtags(value: string) {
       <el-step title="商品资料" description="图 + 描述" />
       <el-step title="视频风格" description="Skill 推荐" />
       <el-step title="脚本分镜" description="可改可删" />
-      <el-step title="预演成片" description="导出物料" />
+      <el-step title="分镜成片" description="导出物料" />
     </el-steps>
 
     <section v-if="step === 0" class="panel step-panel">
@@ -578,7 +593,7 @@ function updateHashtags(value: string) {
         <button class="btn" type="button" @click="step = 1">上一步</button>
         <button class="btn" type="button" @click="saveScript()">保存草稿</button>
         <button class="btn btn-primary" type="button" :disabled="busy" @click="startPrevis">
-          {{ busy ? busyText : '生成预演' }}
+          {{ busy ? busyText : `生成${frameLabel}` }}
           <el-icon><VideoPlay /></el-icon>
         </button>
       </div>
@@ -587,20 +602,22 @@ function updateHashtags(value: string) {
     <template v-else-if="step === 3 && script">
       <div class="grid two-col">
         <section class="panel">
-          <h2 class="panel-title">预演 / 成片</h2>
+          <h2 class="panel-title">{{ frameLabel }} / 成片</h2>
           <GenerationProgress :generation="generation" :title="progressTitle" />
           <div class="inline-actions">
-            <button class="btn" type="button" :disabled="busy" @click="startPrevis">重新生成关键帧</button>
+            <button class="btn" type="button" :disabled="busy" @click="startPrevis(true)">
+              重新生成{{ frameLabel }}
+            </button>
             <button class="btn btn-primary" type="button" :disabled="busy || !previsReady" @click="startRender">
               {{ video ? '重新生成成片' : '生成成片' }}
               <el-icon><VideoPlay /></el-icon>
             </button>
           </div>
-          <p class="hint">建议先确认关键帧与字幕，再生成终版。Mock 模式下每镜约 1–3 秒。</p>
+          <p class="hint">{{ frameHint }}</p>
         </section>
 
         <section class="panel">
-          <h2 class="panel-title">关键帧</h2>
+          <h2 class="panel-title">{{ frameLabel }}</h2>
           <div class="keyframe-grid">
             <div v-for="shot in script.shots" :key="shot.id" class="keyframe-card">
               <img v-if="shot.keyframe_path" :src="mediaUrl(shot.keyframe_path)" :alt="`镜头 ${shot.idx}`" />

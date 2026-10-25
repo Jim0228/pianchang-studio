@@ -4,8 +4,8 @@ export function projectStatus(status: string): { label: string; tone: string } {
     uploaded: { label: '已上传', tone: 'neutral' },
     analyzed: { label: '已解析', tone: 'info' },
     script_ready: { label: '脚本就绪', tone: 'info' },
-    previs_running: { label: '预演中', tone: 'warning' },
-    previs_ready: { label: '预演完成', tone: 'warning' },
+    previs_running: { label: '分镜图生成中', tone: 'warning' },
+    previs_ready: { label: '分镜图就绪', tone: 'warning' },
     rendering: { label: '成片生成中', tone: 'warning' },
     ready: { label: '已成片', tone: 'success' },
     error: { label: '异常', tone: 'danger' },
@@ -26,7 +26,7 @@ export function generationStatus(status: string): { label: string; tone: string 
 export function stageLabel(stage: string): string {
   return (
     {
-      previs: '关键帧预演',
+      previs: '分镜图生成',
       render: '成片渲染',
       script: '脚本生成',
       brief: '商品解析',

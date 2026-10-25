@@ -138,10 +138,10 @@ onUnmounted(() => {
             <img v-if="firstKeyframe" :src="firstKeyframe" :alt="detail.project.name" />
             <div v-else class="placeholder">
               <el-icon><Film /></el-icon>
-              <span>还没有关键帧</span>
+              <span>还没有分镜图</span>
             </div>
             <span class="player-hint">
-              {{ script ? '预演素材已就绪，生成成片后可在这里播放。' : '先生成脚本，再做预演。' }}
+              {{ script ? '分镜图已就绪，生成成片后可在这里播放。' : '先生成脚本，再生成分镜图。' }}
             </span>
           </div>
           <div class="player-foot">
@@ -169,7 +169,7 @@ onUnmounted(() => {
           <ul class="checklist">
             <li :class="{ done: !!detail.product }">商品解析</li>
             <li :class="{ done: !!script }">脚本 / 分镜</li>
-            <li :class="{ done: !!firstKeyframe }">关键帧预演</li>
+            <li :class="{ done: !!firstKeyframe }">分镜图</li>
             <li :class="{ done: !!video }">成片</li>
           </ul>
 
@@ -183,7 +183,7 @@ onUnmounted(() => {
               :disabled="busy"
               @click="startPrevis"
             >
-              {{ firstKeyframe ? '重新生成预演' : '生成关键帧预演' }}
+              {{ firstKeyframe ? '重新生成分镜图' : '生成分镜图' }}
             </button>
             <button
               v-if="script"
@@ -246,7 +246,7 @@ onUnmounted(() => {
             </div>
             <div class="shot-status">
               <span class="dot" :class="shot.status" />
-              {{ shot.status === 'video_ready' ? '已出片' : shot.keyframe_path ? '关键帧' : '待生成' }}
+              {{ shot.status === 'video_ready' ? '已出片' : shot.keyframe_path ? '分镜图' : '待生成' }}
             </div>
           </article>
         </div>

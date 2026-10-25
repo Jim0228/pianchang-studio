@@ -30,7 +30,7 @@ const stats = [
 const steps = [
   { no: '01', title: '上传商品', desc: '产品图 + 一段描述，AI 自动提炼卖点。' },
   { no: '02', title: '选择风格', desc: '按品类与目标推荐 Skill，先看结构再生成。' },
-  { no: '03', title: '确认分镜', desc: '改口播、改字幕、换镜头，先出低成本预演。' },
+  { no: '03', title: '确认分镜', desc: '逐镜生成 9:16 分镜图，先核对商品一致性再出片。' },
   { no: '04', title: '导出成片', desc: '字幕、封面、文案、manifest 一次打包。' },
 ]
 </script>
@@ -42,7 +42,7 @@ const steps = [
         <p class="eyebrow">AI COMMERCE VIDEO STUDIO</p>
         <h1>把商品描述，<br />变成能直接发的短视频。</h1>
         <p class="hero-sub">
-          上传产品图，选一个视频风格。脚本、分镜、关键帧、成片和平台文案，在同一个工作台里完成。
+          上传产品图，选一个视频风格。脚本、分镜图、成片和平台文案，在同一个工作台里完成。
         </p>
         <div class="actions">
           <router-link class="btn btn-primary" to="/projects/new">

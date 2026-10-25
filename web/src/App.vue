@@ -17,7 +17,12 @@ const nav = [
 const isActive = (item: { to: string }) =>
   item.to === '/' ? route.path === '/' : route.path.startsWith(item.to)
 
-const modeLabel = computed(() => (store.mode === 'real' ? 'REAL · 方舟' : 'MOCK · 演示'))
+const modeLabel = computed(() => {
+  if (store.mode !== 'real') return 'MOCK · 演示'
+  const image = store.settings?.image_provider || '-'
+  const video = store.settings?.video_provider || '-'
+  return `REAL · ${image}/${video}`
+})
 
 onMounted(() => {
   store.loadSettings().catch(() => undefined)
