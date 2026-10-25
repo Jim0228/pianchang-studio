@@ -1,0 +1,51 @@
+id: tutorial_howto
+name: 教程干货
+category: education
+goal: 收藏
+version: 1
+platforms: [douyin, xiaohongshu]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [美妆个护, 工具, 母婴, 食品饮料, 家居]
+not_suitable: [二手, 虚拟服务]
+beats:
+  - { id: hook, seconds: 2, purpose: "抛出问题/收益" }
+  - { id: step1, seconds: 3, purpose: "第一步" }
+  - { id: step2, seconds: 3, purpose: "第二步" }
+  - { id: step3, seconds: 3, purpose: "第三步" }
+  - { id: result, seconds: 2, purpose: "效果呈现" }
+  - { id: cta, seconds: 2, purpose: "收藏/行动" }
+shots:
+  min: 4
+  max: 6
+  seconds: [2, 5]
+  product_visible_ratio: 0.6
+  presenter: none
+prompt:
+  style: "干净桌面教学视频，俯拍手部操作，信息清晰，节奏利落"
+  lighting: "均匀柔光，减少阴影，突出操作细节"
+  palette: ["#F5F7F9", "#E3E8ED", "#24292F"]
+  camera: [俯拍固定, 手部特写, 近景推近, 平视固定, 俯拍拉远]
+  negative: "变形, 多余手指, 错误文字, 水印, 低清晰度, 杂乱背景"
+  product_lock: "严格保持商品的外形、比例、颜色、材质、Logo 和包装文字不变"
+subtitle:
+  style: bold_yellow
+  position: lower_third
+  max_chars_per_line: 12
+audio:
+  mode: none
+  bgm_mood: light
+scenes:
+  - "桌面俯拍，产品与工具整齐摆放"
+  - "第一步操作的手部特写，动作清晰"
+  - "第二步操作的手部特写，产品正在使用"
+  - "第三步收尾动作，效果呈现"
+  - "完成后的整体效果，产品入镜"
+  - "产品与成果同框，字幕提示"
+copy:
+  hook: ["{pain}？三步搞定", "学会这招，{sp1}"]
+  step1: ["第一步：{scene_short}", "先做这一步，别急着往下"]
+  step2: ["第二步：{sp1}", "关键在这里，慢一点"]
+  step3: ["第三步：{sp2}", "收尾动作，决定效果"]
+  result: ["看效果，{sp1}", "完成，是不是很简单"]
+  cta: ["先收藏，下次照着做", "想要同款，点下方"]

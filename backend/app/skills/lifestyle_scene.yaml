@@ -1,0 +1,48 @@
+id: lifestyle_scene
+name: 场景生活方式
+category: seeding
+goal: 种草
+version: 1
+platforms: [douyin, xiaohongshu]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [家居, 服饰鞋包, 户外运动, 母婴, 宠物]
+not_suitable: [工业品, 虚拟服务]
+beats:
+  - { id: hook, seconds: 2, purpose: "用一个生活瞬间开场" }
+  - { id: scene1, seconds: 4, purpose: "呈现生活场景与情绪" }
+  - { id: scene2, seconds: 3, purpose: "产品自然融入" }
+  - { id: product, seconds: 3, purpose: "产品与卖点" }
+  - { id: cta, seconds: 3, purpose: "生活方式号召" }
+shots:
+  min: 4
+  max: 6
+  seconds: [2, 5]
+  product_visible_ratio: 0.5
+  presenter: none
+prompt:
+  style: "生活方式摄影，日系自然光，温暖松弛，真实居家氛围"
+  lighting: "清晨窗光，柔和暖调，轻胶片颗粒"
+  palette: ["#F7F2E8", "#D9C7AE", "#3A342D"]
+  camera: [中景跟拍, 固定广角, 近景手持, 俯拍生活流, 慢推]
+  negative: "变形, 多余人物, 错误文字, 水印, 低清晰度, 摆拍感过强"
+  product_lock: "严格保持商品的外形、比例、颜色、材质、Logo 不变；只改变使用环境与光影"
+subtitle:
+  style: soft_white
+  position: lower_third
+  max_chars_per_line: 12
+audio:
+  mode: none
+  bgm_mood: warm
+scenes:
+  - "周末清晨的客厅，阳光洒在沙发上"
+  - "人物在厨房准备早餐，产品自然出现在台面"
+  - "一家人围坐使用产品，氛围轻松"
+  - "产品特写，融入生活场景不突兀"
+  - "窗边收尾镜头，产品与光影"
+copy:
+  hook: ["周末在家的样子，藏在这些细节里", "生活不需要很贵，但要顺手"]
+  scene1: ["阳光刚好，{scene_short}", "慢下来的早晨，才像生活"]
+  scene2: ["它很自然地融入了这个角落", "没有刻意摆拍，就是日常"]
+  product: ["{title}，{sp1}", "好用这件事，用过才知道"]
+  cta: ["把这份松弛感带回家", "下方看看同款"]

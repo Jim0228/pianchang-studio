@@ -1,0 +1,51 @@
+id: factory_origin
+name: 工厂 / 源头溯源
+category: trust
+goal: 信任
+version: 1
+platforms: [douyin, xiaohongshu]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [食品饮料, 农产品, 日用品, 家居, 服饰鞋包]
+not_suitable: [虚拟服务, 二手]
+beats:
+  - { id: hook, seconds: 2, purpose: "用产地/产线建立好奇" }
+  - { id: origin, seconds: 3, purpose: "产地与原料" }
+  - { id: craft, seconds: 3, purpose: "工艺与标准" }
+  - { id: quality, seconds: 3, purpose: "质检与细节" }
+  - { id: product, seconds: 2, purpose: "成品呈现" }
+  - { id: cta, seconds: 2, purpose: "信任转行动" }
+shots:
+  min: 4
+  max: 6
+  seconds: [2, 5]
+  product_visible_ratio: 0.55
+  presenter: none
+prompt:
+  style: "纪实摄影，产地溯源，真实工业与自然场景，电影感低饱和"
+  lighting: "自然天光与厂房侧光结合，层次分明"
+  palette: ["#E9E4D8", "#8A7A62", "#23211D"]
+  camera: [航拍广角, 手持跟拍, 特写推近, 平移扫过, 固定中景]
+  negative: "变形, 错误文字, 水印, 低清晰度, 脏乱, 夸张特效"
+  product_lock: "严格保持商品包装、颜色、Logo、文字不变；不得虚构产地标识与认证"
+subtitle:
+  style: documentary_white
+  position: lower_third
+  max_chars_per_line: 14
+audio:
+  mode: none
+  bgm_mood: inspiring
+scenes:
+  - "产地山坡与晨雾中的原料作物，真实自然"
+  - "原料采摘与分拣特写，双手翻拣"
+  - "日晒/处理场地的原料铺开，阳光充足"
+  - "加工设备运转，原料在设备中翻滚"
+  - "质检台上摆放样品，记录表清晰"
+  - "成品包装与原料同框，干净整洁"
+copy:
+  hook: ["带你看看{title}的源头", "从产地到你家，中间发生了什么"]
+  origin: ["源头在这里：{scene_short}", "好原料，是第一步"]
+  craft: ["工艺上，{sp1}", "每一步都有标准"]
+  quality: ["每一批都经过检查", "看得见的流程，才放心"]
+  product: ["{title}，{sp1}", "从源头到手上，就这么直接"]
+  cta: ["想看更多细节，点下方", "源头直发，下方了解"]

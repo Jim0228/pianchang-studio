@@ -1,0 +1,48 @@
+id: product_closeup
+name: 产品特写 / ASMR
+category: seeding
+goal: 种草
+version: 1
+platforms: [douyin, xiaohongshu]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [食品饮料, 美妆个护, 饰品, 香氛, 茶酒]
+not_suitable: [3C数码, 大件家居]
+beats:
+  - { id: hook, seconds: 2, purpose: "用画面质感抓人" }
+  - { id: texture, seconds: 3, purpose: "材质/质地微距" }
+  - { id: detail, seconds: 3, purpose: "细节与工艺" }
+  - { id: usage, seconds: 4, purpose: "使用过程/感官体验" }
+  - { id: cta, seconds: 3, purpose: "轻柔收尾 + 行动指令" }
+shots:
+  min: 4
+  max: 5
+  seconds: [3, 4]
+  product_visible_ratio: 0.8
+  presenter: none
+prompt:
+  style: "高端产品广告，微距摄影，浅景深，质感细腻，安静氛围"
+  lighting: "侧逆光扫过轮廓，柔光，暗部有层次"
+  palette: ["#F3EDE4", "#C9A77C", "#1B1714"]
+  camera: [微距推近, 环绕特写, 侧逆光平移, 慢速拉远, 固定特写]
+  negative: "变形, 多余部件, 错误文字, 水印, 低清晰度, 噪点, 杂乱背景"
+  product_lock: "严格保持商品的外形、比例、颜色、材质、Logo、包装文字不变；不得改变内容物"
+subtitle:
+  style: minimal_white
+  position: lower_third
+  max_chars_per_line: 10
+audio:
+  mode: none
+  bgm_mood: calm
+scenes:
+  - "纯色背景下的产品微距特写，表面纹理清晰"
+  - "侧逆光扫过产品轮廓，材质高光流动"
+  - "产品细节局部特写，Logo 与工艺可见"
+  - "产品在使用场景中的局部，手部动作轻柔"
+  - "产品静置在质感台面上，大面积留白"
+copy:
+  hook: ["先别说话，看质感", "这个细节，值得放大看"]
+  texture: ["看这个质地，{sp1}", "光线一打，层次就出来了"]
+  detail: ["细节经得起看：{scene_short}", "做工和用料，都在细节里"]
+  usage: ["用起来，是一种享受", "慢一点，感受{sp1}"]
+  cta: ["喜欢的话，点下方看看", "链接在下面，慢慢挑"]

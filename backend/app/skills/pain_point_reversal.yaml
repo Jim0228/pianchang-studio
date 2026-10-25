@@ -1,0 +1,48 @@
+id: pain_point_reversal
+name: 痛点反转
+category: conversion
+goal: 转化
+version: 1
+platforms: [douyin, xiaohongshu]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [家居清洁, 清洁, 小家电, 母婴, 日用品]
+not_suitable: [高客单耐消, 虚拟服务]
+beats:
+  - { id: hook, seconds: 3, purpose: "3 秒抛出痛点或反常识" }
+  - { id: problem, seconds: 3, purpose: "放大痛点，建立共鸣" }
+  - { id: reveal, seconds: 4, purpose: "产品出场，给出一击" }
+  - { id: proof, seconds: 3, purpose: "演示/对比/证据" }
+  - { id: cta, seconds: 2, purpose: "利益点 + 行动指令" }
+shots:
+  min: 4
+  max: 6
+  seconds: [2, 5]
+  product_visible_ratio: 0.6
+  presenter: none
+prompt:
+  style: "真实生活质感，电商广告级清晰度，自然光，轻微手持感"
+  lighting: "窗边侧逆光，柔和阴影，干净通透"
+  palette: ["#F6F1E7", "#E8D9C5", "#2E2A26"]
+  camera: [特写推近, 手持近景, 中景固定, 微距平移, 俯拍拉远]
+  negative: "变形, 多余部件, 错误文字, 水印, 低清晰度, 过曝, 塑料感"
+  product_lock: "严格保持商品的外形、比例、颜色、材质、Logo、结构和文字不变；不得增删部件"
+subtitle:
+  style: bold_yellow
+  position: lower_third
+  max_chars_per_line: 12
+audio:
+  mode: none
+  bgm_mood: upbeat
+scenes:
+  - "厨房灶台边缘的顽固油污特写，台面有油渍和抹布"
+  - "手持清洁剂对准油污喷洒，细密水雾在光下可见"
+  - "抹布轻轻一擦，油污被带走，台面露出原本的光泽"
+  - "产品瓶身与成分配料表特写，植物配方字样清晰"
+  - "干净明亮的厨房全景，产品放在台面显眼位置"
+copy:
+  hook: ["{pain}，你是不是也遇到过？", "别再为{pain}花冤枉钱了"]
+  problem: ["每次{scene_short}，都特别费劲", "试了很多办法，还是反反复复"]
+  reveal: ["直到我遇到{title}", "换上{title}之后，真的省事"]
+  proof: ["{sp1}，{sp2}，实测看得见", "不是玄学，{sp1}就是底气"]
+  cta: ["现在下单，{price}元到手", "点击下方，把麻烦一次解决"]

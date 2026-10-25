@@ -1,0 +1,51 @@
+id: unboxing_review
+name: 开箱测评
+category: seeding
+goal: 种草
+version: 1
+platforms: [douyin, xiaohongshu]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [3C数码, 美妆个护, 食品饮料, 玩具]
+not_suitable: [生鲜, 大件家具]
+beats:
+  - { id: hook, seconds: 2, purpose: "开箱前制造期待" }
+  - { id: unbox, seconds: 3, purpose: "开箱过程与第一印象" }
+  - { id: detail, seconds: 3, purpose: "外观/材质细节" }
+  - { id: test, seconds: 3, purpose: "真实使用测试" }
+  - { id: verdict, seconds: 2, purpose: "结论与适合人群" }
+  - { id: cta, seconds: 2, purpose: "行动指令" }
+shots:
+  min: 4
+  max: 6
+  seconds: [2, 5]
+  product_visible_ratio: 0.65
+  presenter: none
+prompt:
+  style: "真实开箱视频质感，桌面俯拍与手部特写，明亮干净"
+  lighting: "顶部柔光箱 + 侧补光，阴影柔和"
+  palette: ["#F4F6F8", "#DDE6EE", "#1F2933"]
+  camera: [俯拍固定, 手部特写, 产品环绕, 近景推近, 平视固定]
+  negative: "变形, 多余部件, 错误文字, 水印, 低清晰度, 反光过曝"
+  product_lock: "严格保持商品的外形、比例、颜色、材质、Logo、结构和文字不变；不得增删配件"
+subtitle:
+  style: bold_yellow
+  position: lower_third
+  max_chars_per_line: 12
+audio:
+  mode: none
+  bgm_mood: fresh
+scenes:
+  - "快递箱放在木桌上，双手准备打开箱盖"
+  - "产品从包装中取出，包装和配件摊开"
+  - "产品外观 360 度特写，材质与做工清晰"
+  - "实际使用场景，产品正在工作"
+  - "使用前后对比，结果直观"
+  - "产品与包装合影，价格牌入镜"
+copy:
+  hook: ["今天开箱{title}", "{title}到底值不值？先开箱"]
+  unbox: ["包装挺讲究，配件也齐全", "第一眼质感在线"]
+  detail: ["细节看一下：{scene_short}", "做工和手感都在线"]
+  test: ["实测：{sp1}", "直接上手试，{sp2}"]
+  verdict: ["总结：{sp1}，适合{audience}", "这个价位，{sp2}"]
+  cta: ["链接放下面了，自己看", "想入的趁活动"]

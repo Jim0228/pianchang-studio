@@ -1,0 +1,83 @@
+douyin:
+  name: 抖音
+  ratio: "9:16"
+  width: 1080
+  height: 1920
+  durations: [15, 30, 60]
+  title_limit: 30
+  body_limit: 1000
+  hashtag_count: 3
+  safe_area: {top: 0.12, bottom: 0.18, left: 0.06, right: 0.06}
+  note: "3 秒钩子、强节奏、口播与大字幕"
+
+xiaohongshu:
+  name: 小红书
+  ratio: "3:4"
+  width: 1080
+  height: 1440
+  durations: [15, 30, 60]
+  title_limit: 20
+  body_limit: 1000
+  hashtag_count: 5
+  safe_area: {top: 0.10, bottom: 0.16, left: 0.06, right: 0.06}
+  note: "真实体验、干货、少硬广"
+
+xianyu:
+  name: 闲鱼
+  ratio: "1:1"
+  width: 1080
+  height: 1080
+  durations: [15, 30]
+  title_limit: 30
+  body_limit: 500
+  hashtag_count: 2
+  safe_area: {top: 0.08, bottom: 0.12, left: 0.06, right: 0.06}
+  note: "个人化、真实、低价理由"
+
+taobao:
+  name: 淘宝 / 天猫
+  ratio: "1:1"
+  width: 1000
+  height: 1000
+  durations: [9, 15, 30]
+  title_limit: 30
+  body_limit: 500
+  hashtag_count: 0
+  safe_area: {top: 0.08, bottom: 0.12, left: 0.06, right: 0.06}
+  note: "卖点前置、静音可看"
+
+pinduoduo:
+  name: 拼多多
+  ratio: "1:1"
+  width: 750
+  height: 750
+  durations: [9, 15, 30]
+  title_limit: 60
+  body_limit: 500
+  hashtag_count: 0
+  safe_area: {top: 0.08, bottom: 0.12, left: 0.06, right: 0.06}
+  note: "直白、价格利益点"
+
+shipinhao:
+  name: 视频号
+  ratio: "9:16"
+  width: 1080
+  height: 1920
+  durations: [15, 30, 60]
+  title_limit: 30
+  body_limit: 1000
+  hashtag_count: 3
+  safe_area: {top: 0.12, bottom: 0.18, left: 0.06, right: 0.06}
+  note: "社交推荐、生活感"
+
+bilibili:
+  name: B 站
+  ratio: "16:9"
+  width: 1920
+  height: 1080
+  durations: [30, 60, 120]
+  title_limit: 80
+  body_limit: 2000
+  hashtag_count: 5
+  safe_area: {top: 0.08, bottom: 0.12, left: 0.06, right: 0.06}
+  note: "横屏、信息密度"
