@@ -34,7 +34,7 @@ subtitle:
 presenter:
   enabled: true
   type: hand_model
-  description: "一双干净的成年女性手，裸色短甲，浅米色针织袖口；全片只出现这一双手，不出现脸"
+  description: "一双成年女性手，肤色自然偏白，手指修长干净，裸色短甲、无美甲图案、无戒指手链，浅米色针织袖口露出手腕；全片只出现这一双手，不出现脸和身体"
   framing: "俯拍手部为主，不出现人物面部"
 continuity:
   mode: continuous_action

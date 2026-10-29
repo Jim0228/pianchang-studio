@@ -283,20 +283,29 @@ def generate_subtitle_png(
     project: Project,
     shot: Shot,
 ) -> Asset | None:
-    text = (shot.on_screen or "").strip()
+    text = (shot.on_screen or shot.voiceover or "").strip()
     if not text:
         return None
     width, height = settings.video_width, settings.video_height
     image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
-    font = get_font(max(32, int(width * 0.048)), bold=True)
-    lines = wrap_text(text, font, int(width * 0.78), draw)
+    # 字幕就是台词本身：长句自动降字号、换行，保证读得全也不溢出
+    length = len(text)
+    if length <= 18:
+        size = int(width * 0.048)
+    elif length <= 32:
+        size = int(width * 0.042)
+    else:
+        size = int(width * 0.036)
+    font = get_font(max(30, size), bold=True)
+    lines = wrap_text(text, font, int(width * 0.82), draw)
     line_height = max(draw.textbbox((0, 0), line, font=font)[3] for line in lines) if lines else 46
-    pad = 28
-    box_w = int(width * 0.84)
-    box_h = line_height * len(lines) + pad * 2 + 10 * max(0, len(lines) - 1)
+    pad = 26
+    box_w = int(width * 0.88)
+    box_h = line_height * len(lines) + pad * 2 + 8 * max(0, len(lines) - 1)
     x = (width - box_w) // 2
-    y = height - int(height * 0.17) - box_h
+    y = height - int(height * 0.15) - box_h
+    y = max(int(height * 0.12), y)
     draw.rounded_rectangle([x, y, x + box_w, y + box_h], radius=18, fill=(16, 14, 12, 184))
     draw.rounded_rectangle([x, y, x + 8, y + box_h], radius=4, fill=(255, 190, 64, 255))
     current_y = y + pad
@@ -308,7 +317,7 @@ def generate_subtitle_png(
             font=font,
             fill=(255, 255, 255, 255),
         )
-        current_y += line_height + 10
+        current_y += line_height + 8
 
     folder = settings.data_path / "projects" / project.id / "subtitles"
     path = folder / f"subtitle_{shot.idx:02d}.png"

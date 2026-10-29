@@ -100,16 +100,21 @@ class DeepSeekClient:
         )
         voice_budget = max(8, int(duration * 2.9))
         line_style = str(voice.get("line_style") or "口语短句")
+        shot_count = max(4, min(8, round(duration / 5)))
         system = (
             "你是资深电商短视频编导。根据商品档案与视频风格 Skill，输出严格 JSON，不要 Markdown。"
             "结构：{title, shots:[{idx,seconds,beat,scene,camera,action,voiceover,on_screen,prompt}], "
             "cover:{title,subtitle}, caption:{title,body,hashtags:[...]}, style_bible:{...}}。"
-            f"镜头数 4-6，总时长必须等于 {duration} 秒；on_screen<=18字。"
+            f"镜头数必须为 {shot_count} 个（可按叙事 ±1），总时长严格等于 {duration} 秒，"
+            "单镜 3-12 秒，不要出现 2 秒以下的碎片镜头。"
             f"voiceover 是给 TTS 朗读的台词：全片总字数 <= {voice_budget} 字，"
             "单镜字数 <= 该镜秒数×3.2，必须是能直接朗读的中文短句，不要书面长句、不要括号注释、不要 emoji；"
             f"风格：{line_style}。"
+            "on_screen 必须与 voiceover 逐字相同，不要另写一句字幕。"
             "scene/action 只写画面：商品 + 场景/道具 + 光线/运镜，"
             "全片同一款同一颜色商品，每个画面只出现一件商品；所有镜头限定在同一场景空间。"
+            "写到人物时，每个镜头的 scene 都要带同一套外观关键信息（衣服颜色、发型、状态），"
+            "不要只写“她/他”，确保人物描述完整、可复现。"
             f"{people_rule}{continuity_rule}"
             "不写文字、价格牌、认证标志、销量、第二名商品；不得虚构参数、功效、销量、认证；"
             "不得使用绝对化用语。只输出 JSON。"

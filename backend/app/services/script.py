@@ -181,7 +181,7 @@ def build_mock_script(
         vo_options = copy_map.get(beat_id) or BEAT_VO.get(beat_id) or ["{title}"]
         screen_options = BEAT_SCREEN.get(beat_id) or ["{sp1}"]
         voiceover = _fmt(_pick(vo_options, index - 1), local_ctx)
-        on_screen = truncate(_fmt(_pick(screen_options, index - 1), local_ctx), 18)
+        on_screen = voiceover
         prompt = "。".join(
             part
             for part in [
@@ -274,26 +274,33 @@ def validate_and_repair(data: dict, duration: int, ratio: str, platform: str) ->
     shots = data.get("shots")
     if not isinstance(shots, list) or not shots:
         raise AppError("SCRIPT_INVALID", "脚本没有可用镜头", status_code=502)
-    if len(shots) > 8:
-        shots = shots[:8]
+    if len(shots) > 10:
+        shots = shots[:10]
 
     repaired: list[dict] = []
     for index, raw in enumerate(shots, start=1):
         shot = dict(raw or {})
         shot["idx"] = index
-        shot["seconds"] = raw.get("seconds", 3)
+        try:
+            seconds = float(raw.get("seconds", 3) or 3)
+        except (TypeError, ValueError):
+            seconds = 3.0
+        shot["seconds"] = round(max(2.0, min(15.0, seconds)), 2)
         shot["beat"] = str(shot.get("beat", ""))
         shot["scene"] = str(shot.get("scene", "产品使用场景"))
         shot["camera"] = str(shot.get("camera", "中景固定"))
         shot["action"] = str(shot.get("action", shot["scene"]))
-        shot["voiceover"] = truncate(str(shot.get("voiceover", "")), 60)
-        shot["on_screen"] = truncate(str(shot.get("on_screen", "")), 18)
+        shot["voiceover"] = truncate(str(shot.get("voiceover", "")), 90)
+        # 字幕与台词强一致：屏幕上显示的就是配音念的那句
+        shot["on_screen"] = shot["voiceover"]
         shot["prompt"] = str(shot.get("prompt", ""))
         repaired.append(shot)
 
     _repair_duration(repaired, duration)
+    _rebalance_duration(repaired, duration)
     for shot in repaired:
         shot["voiceover"] = _fit_voiceover(shot["voiceover"], float(shot["seconds"]))
+        shot["on_screen"] = shot["voiceover"]
     data["shots"] = repaired
     data["duration"] = duration
     data["ratio"] = ratio
@@ -304,6 +311,26 @@ def validate_and_repair(data: dict, duration: int, ratio: str, platform: str) ->
     data.setdefault("style_bible", {})
     data["compliance"] = check_script(data)
     return data
+
+
+def _rebalance_duration(shots: list[dict], duration: int) -> None:
+    """在 2–15 秒的硬约束内把总时长校回目标值。"""
+    if not shots:
+        return
+    for shot in shots:
+        shot["seconds"] = max(2.0, min(15.0, float(shot["seconds"])))
+    diff = round(float(duration) - sum(float(shot["seconds"]) for shot in shots), 2)
+    if abs(diff) < 0.01:
+        return
+    for shot in shots:
+        room = (15.0 - float(shot["seconds"])) if diff > 0 else (float(shot["seconds"]) - 2.0)
+        take = min(abs(diff), room)
+        if take <= 0:
+            continue
+        shot["seconds"] = round(float(shot["seconds"]) + (take if diff > 0 else -take), 2)
+        diff = round(diff - (take if diff > 0 else -take), 2)
+        if abs(diff) < 0.01:
+            return
 
 
 def _persist_script(
@@ -489,13 +516,14 @@ def patch_script(session: Session, script: Script, payload) -> dict:
                 or str(patch.get("prompt", row.prompt)) != str(row.prompt)
                 or seconds != float(row.seconds)
             )
-            text_changed = str(patch.get("on_screen", row.on_screen)) != str(row.on_screen)
+            text_changed = str(patch.get("voiceover", row.voiceover)) != str(row.voiceover)
             row.seconds = seconds
             row.scene = patch.get("scene", row.scene)
             row.camera = patch.get("camera", row.camera)
             row.action = patch.get("action", row.action)
-            row.voiceover = truncate(patch.get("voiceover", row.voiceover), 60)
-            row.on_screen = truncate(patch.get("on_screen", row.on_screen), 18)
+            row.voiceover = truncate(patch.get("voiceover", row.voiceover), 90)
+            # 字幕永远等于台词，避免"嘴上说的和屏幕上的不一致"
+            row.on_screen = row.voiceover
             row.prompt = patch.get("prompt", row.prompt)
             # 只重置真正改动过的镜头资产，避免"改一句文案就丢掉全部分镜图"
             if visual_changed:

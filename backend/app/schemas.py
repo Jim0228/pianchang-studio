@@ -50,7 +50,7 @@ class ScriptCreate(BaseModel):
 
 class ShotPatch(BaseModel):
     idx: int
-    seconds: float = Field(default=3.0, ge=1.0, le=30.0)
+    seconds: float = Field(default=3.0, ge=2.0, le=15.0)
     scene: str = ""
     camera: str = ""
     action: str = ""

@@ -254,6 +254,39 @@ def test_voiceover_is_trimmed_to_shot_budget():
     assert _fit_voiceover("一喷一擦", 3.0) == "一喷一擦"
 
 
+def test_longer_duration_scales_shots_and_subtitle_matches_voiceover(client):
+    project = client.post(
+        "/api/projects",
+        json={
+            "name": "声波电动牙刷 30 秒",
+            "description": "白色机身，五档模式，IPX7 防水，续航 30 天，128 元",
+            "platform": "douyin",
+            "duration": 30,
+            "ratio": "9:16",
+        },
+    ).json()
+    project_id = project["id"]
+    client.post(
+        f"/api/projects/{project_id}/upload",
+        files=[("files", ("product.jpg", make_product_image(), "image/jpeg"))],
+    )
+    client.post(f"/api/projects/{project_id}/analyze")
+    skill = client.post("/api/skills/recommend", json={"project_id": project_id}).json()["items"][0]
+    script = client.post(
+        f"/api/projects/{project_id}/scripts",
+        json={"skill_id": skill["id"], "platform": "douyin", "duration": 30, "ratio": "9:16"},
+    ).json()
+
+    shots = script["shots"]
+    assert script["duration"] == 30
+    assert len(shots) >= 4
+    assert abs(sum(float(shot["seconds"]) for shot in shots) - 30) < 0.01
+    for shot in shots:
+        assert 2 <= float(shot["seconds"]) <= 15
+        assert shot["on_screen"] == shot["voiceover"]
+
+
+
 def test_bgm_matches_requested_duration(tmp_path):
     path = generate_bgm(tmp_path / "bgm.wav", 4.0, "warm")
     with wave.open(str(path), "rb") as handle:

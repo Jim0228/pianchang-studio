@@ -31,6 +31,7 @@ const assets = ref<Asset[]>([])
 const files = ref<File[]>([])
 const localPreviews = ref<string[]>([])
 const form = reactive({ name: '', description: '', price: '' })
+const duration = ref(15)
 const briefDraft = reactive({
   title: '',
   category: '',
@@ -132,6 +133,7 @@ async function loadExisting(id: string) {
     form.name = detail.project.name
     form.description = detail.project.description
     form.price = detail.product?.price || ''
+    duration.value = detail.project.duration || 15
     script.value = detail.script ? normalizeScript(detail.script) : null
     video.value = detail.video
     generation.value = detail.latest_generation
@@ -190,7 +192,7 @@ async function submitProduct() {
         name: form.name.trim() || description.slice(0, 20),
         description,
         platform: 'douyin',
-        duration: 15,
+        duration: duration.value,
         ratio: '9:16',
       })
       projectId.value = created.id
@@ -200,7 +202,7 @@ async function submitProduct() {
         name: form.name.trim() || description.slice(0, 20),
         description,
         platform: 'douyin',
-        duration: 15,
+        duration: duration.value,
         ratio: '9:16',
       })
     }
@@ -263,7 +265,7 @@ async function generateScript() {
       await api.createScript(projectId.value, {
         skill_id: selectedSkill.value.id,
         platform: 'douyin',
-        duration: 15,
+        duration: duration.value,
         ratio: '9:16',
       }),
     )
@@ -443,6 +445,15 @@ function updateHashtags(value: string) {
           />
           <label class="field-label">价格（可选）</label>
           <el-input v-model="form.price" placeholder="例如：39.9" />
+          <label class="field-label">视频时长</label>
+          <el-radio-group v-model="duration">
+            <el-radio-button :value="15">15 秒</el-radio-button>
+            <el-radio-button :value="30">30 秒</el-radio-button>
+            <el-radio-button :value="60">60 秒</el-radio-button>
+          </el-radio-group>
+          <p class="hint">
+            30/60 秒会按脚本生成更多分镜（单镜 3–12 秒），配音和出片时间相应变长。
+          </p>
           <p class="hint">描述越具体，脚本和分镜越贴近真实卖点。没有图片也可以先跑通流程。</p>
         </div>
 
@@ -596,7 +607,7 @@ function updateHashtags(value: string) {
           </div>
           <div class="seconds">
             <span class="muted small">时长</span>
-            <el-input-number v-model="shot.seconds" :min="1" :max="10" :step="1" size="small" />
+            <el-input-number v-model="shot.seconds" :min="2" :max="15" :step="0.5" size="small" />
             <span class="muted small">秒</span>
           </div>
         </div>
