@@ -2,21 +2,24 @@
 
 输入产品图 + 商品描述，选择视频风格 Skill，自动生成脚本、分镜图与平台成片。视频优先，图片与文案作为支撑。
 
-当前版本：**v0.4：9 个风格 Skill + 场景基准分镜图 + 单镜重生成 + 成片导出（DeepSeek + REST）**
-技术栈：Vue 3 + TypeScript + Vite + Element Plus ｜ Python 3.12 + FastAPI + SQLite ｜ Pillow + FFmpeg ｜ DeepSeek ｜ REST 美术资源
+当前版本：**v0.5：13 个风格 Skill + 人物/动作连贯 + AI 配音 + 整条 BGM + 场景基准分镜**
+技术栈：Vue 3 + TypeScript + Vite + Element Plus ｜ Python 3.12 + FastAPI + SQLite ｜ Pillow + FFmpeg + NumPy ｜ DeepSeek ｜ Windows SAPI ｜ REST 美术资源
 
 ---
 
 ## 已经能做什么
 
 - 新建项目、上传产品图、填写商品描述，AI 解析商品档案。
-- 9 个视频风格 Skill：痛点反转、开箱测评、产品特写/ASMR、场景生活方式、工厂溯源、教程干货、数码开箱实测、美妆试色、食品食欲感。
-- 按品类、目标、平台推荐 Top3 风格，并给出理由；每个 Skill 自带 beats、镜头规范、视觉规范、**场景基准（scene_bible）** 与文案模板。
+- 13 个视频风格 Skill：痛点反转、开箱测评、产品特写/ASMR、场景生活方式、工厂溯源、教程干货、数码开箱实测、美妆试色、食品食欲感、**主播出镜带货、手部连续演示、生活情景连贯、五镜连贯广告**。
+- 按品类、目标、平台推荐 Top3 风格，并给出理由；每个 Skill 自带 beats、镜头规范、视觉规范、**场景基准（scene_bible）**、**人物设定（presenter）**、**动作连贯规则（continuity）**、配音与 BGM 设定。
 - 生成结构化脚本与 4–6 个分镜，总时长严格等于 15 秒；脚本、口播、字幕、时长、Prompt 全部可编辑，改哪一镜只重置哪一镜。
 - **分镜图**：真实模式逐镜调用 REST 图片模型，按「商品锁定 + 风格锚点 + 场景基准 + 负向词」生成 9:16 无文字分镜图。
 - **场景统一**：每个脚本先出 1 张空场景 `scene_anchor`（同机位、同光线、同色板），5 张分镜都以它为环境参考，联系表 `contact_sheet.jpg` 第一格是商品参考、第二格是场景基准。
 - **单镜重生成**：每张分镜可单独改画面/Prompt 后只重生成这一张，其它镜头与已出片镜头保留；不再"改一个字全部重跑"。
 - **成片**：以分镜图为首帧做图生视频；FFmpeg 统一 1080×1920 / 30fps、烧字幕、加 AI 标识、拼接、生成封面；支持直接下载 MP4 或导出 ZIP。
+- **AI 配音**：每镜台词由脚本生成，Windows SAPI（Huihui zh-CN）逐句合成，按镜头时间轴排布；台词按「镜头秒数 × 4.2 字」在脚本层裁剪，避免压到下一镜。
+- **整条 BGM**：numpy 本地合成一首与成片等长的背景音乐（和弦铺底 + 低音 + 琶音 + 轻鼓点），不逐镜拼接，混音时替换原音轨。
+- **人物与连贯**：`presenter` 固定同一个人/同一套衣服，`continuity.action_arc` 规定动作弧线；分镜生成时把上一镜作为第三张参考图，保证人物、道具、动作接续。
 - 导出 ZIP：MP4、封面、脚本 JSON、SRT、发布文案、manifest。
 - 合规检查：极限词/功效词扫描，结果写入 manifest。
 - Mock / Real 双模式；真实能力由 LLM / 图片 / 视频三个 provider 决定。
@@ -214,9 +217,9 @@ backend/
     schemas.py           请求模型
     api.py               REST 路由
     jobs.py              分镜图 / 渲染 / 真实模式分支
-    skills/*.yaml        9 个视频风格（含 scene_bible 场景基准）
+    skills/*.yaml        13 个视频风格（scene_bible / presenter / continuity / voice）
     presets/platforms.yaml
-    services/            解析、推荐、脚本、分镜、关键帧、FFmpeg、打包、合规
+    services/            解析、推荐、脚本、分镜、关键帧、配音 TTS、BGM 合成、混音、FFmpeg、打包、合规
     services/providers/  DeepSeek / REST Art / Ark / Seedance / MCP
   tests/                 pytest
 web/

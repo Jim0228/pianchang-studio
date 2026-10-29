@@ -1,0 +1,72 @@
+id: life_story_flow
+name: 生活情景连贯
+category: seeding
+goal: 种草
+version: 1
+platforms: [douyin, xiaohongshu]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [家居, 家电, 母婴, 宠物, 日用品]
+not_suitable: [工业品, 虚拟服务]
+beats:
+  - { id: hook, seconds: 2, purpose: "生活瞬间开场" }
+  - { id: scene1, seconds: 4, purpose: "人物遇到小麻烦" }
+  - { id: scene2, seconds: 4, purpose: "产品自然介入解决" }
+  - { id: product, seconds: 3, purpose: "结果与产品同框" }
+  - { id: cta, seconds: 2, purpose: "生活方式收尾" }
+shots:
+  min: 4
+  max: 5
+  seconds: [2, 5]
+  product_visible_ratio: 0.5
+  presenter: host
+prompt:
+  style: "生活感广告，真实居家，自然光，纪实轻微手持，情绪连贯"
+  lighting: "清晨窗光，柔和暖调，轻胶片颗粒"
+  palette: ["#F7F2E8", "#D9C7AE", "#3A342D"]
+  camera: [中景跟拍, 近景, 手部特写, 中景固定, 拉远]
+  negative: "变形, 多余人物, 错误文字, 水印, 低清晰度, 摆拍感过强, 服装变化"
+  product_lock: "严格保持商品外形、比例、颜色、材质、Logo 不变；人物始终是同一人、同一套衣服"
+subtitle:
+  style: soft_white
+  position: lower_third
+  max_chars_per_line: 12
+presenter:
+  enabled: true
+  type: host
+  description: "32 岁左右亚洲女性，米白色家居服，扎低丸子头，素颜；全片同一人、同一套衣服，动作自然"
+  framing: "中景为主，生活化跟拍"
+continuity:
+  mode: continuous_action
+  action_arc: ["在客厅收拾，眉头微皱", "走进厨房看到台面问题", "拿起产品开始处理", "处理完直起身松一口气", "把产品放回原位，画面拉远"]
+  rules:
+    - "同一个人、同一套家居服、同一发型贯穿全片"
+    - "动作和情绪连续：皱眉 → 动手 → 放松"
+    - "客厅与厨房是同一套住宅，光线方向一致"
+voice:
+  enabled: true
+  rate: 0
+  line_style: "第一人称生活化口吻，每镜不超过 10 字，全片不超过 45 字"
+audio:
+  mode: voiceover
+  bgm_mood: warm
+  bgm_note: "整条 15 秒一首：温暖钢琴 + 轻弦乐，结尾留白"
+scenes:
+  - "清晨客厅，女主人收拾桌面，表情有点无奈"
+  - "她走进厨房，看到台面上一片狼藉"
+  - "她拿起产品，俯身开始处理"
+  - "处理完直起身，台面干净，她松了口气"
+  - "她把产品放回台面，镜头缓缓拉远"
+scene_bible:
+  location: "同一套住宅的客厅与开放式厨房"
+  time_of_day: "morning"
+  props: ["浅木餐桌", "米色沙发", "白色厨房台面", "窗边绿植"]
+  lighting: "清晨窗光，柔和暖调"
+  grade: "暖奶油色，轻胶片颗粒"
+  lens: "35mm 等效，环境人像"
+copy:
+  hook: ["周末在家，最烦这个", "一个人住，也要好好收拾"]
+  scene1: ["每次看到都头疼", "又来了"]
+  scene2: ["试试这个", "一喷一擦"]
+  product: ["收拾完，才像家", "干净的感觉真好"]
+  cta: ["同款放下面了", "想省事的看这里"]

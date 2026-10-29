@@ -52,11 +52,9 @@ def _product_visual_text(brief: dict, description: str = "") -> str:
     return "; ".join(parts)
 
 
-def _merge_negative(skill_negative: str) -> str:
-    """商品一致性约束不依赖 Skill：人物、手、文字、多余商品一律禁止。"""
+def _merge_negative(skill_negative: str, *, allow_people: bool = False) -> str:
+    """商品一致性约束不依赖 Skill；有人物出镜时放行人物，但仍禁止多余的人和文字。"""
     hard = [
-        "no people",
-        "no hands",
         "no text",
         "no letters",
         "no price tag",
@@ -65,6 +63,10 @@ def _merge_negative(skill_negative: str) -> str:
         "no second product",
         "no duplicate product",
     ]
+    if allow_people:
+        hard += ["no extra people", "no duplicate person"]
+    else:
+        hard += ["no people", "no hands"]
     merged = [item.strip() for item in (skill_negative or "").split(",") if item.strip()]
     lowered = {item.lower() for item in merged}
     for item in hard:
@@ -104,6 +106,48 @@ def _scene_bible_lines(scene_bible: dict) -> list[str]:
     return lines
 
 
+def resolve_presenter(skill_config: dict) -> dict:
+    raw = skill_config.get("presenter") or {}
+    return {
+        "enabled": bool(raw.get("enabled")),
+        "type": str(raw.get("type") or "none"),
+        "description": str(raw.get("description") or "").strip(),
+        "framing": str(raw.get("framing") or "").strip(),
+    }
+
+
+def resolve_continuity(skill_config: dict) -> dict:
+    raw = skill_config.get("continuity") or {}
+    return {
+        "mode": str(raw.get("mode") or "cut"),
+        "action_arc": [str(item) for item in (raw.get("action_arc") or [])],
+        "rules": [str(item) for item in (raw.get("rules") or [])],
+    }
+
+
+def _presenter_lines(presenter: dict) -> list[str]:
+    if not presenter.get("enabled") or not presenter.get("description"):
+        return []
+    lines = [
+        "SAME PERSON IN EVERY SHOT (identity lock): " + presenter["description"] + ".",
+    ]
+    if presenter.get("framing"):
+        lines.append(f"Presenter framing: {presenter['framing']}.")
+    return lines
+
+
+def _continuity_lines(continuity: dict) -> list[str]:
+    lines: list[str] = []
+    if continuity.get("rules"):
+        lines.append("CONTINUITY RULES: " + " ".join(continuity["rules"]))
+    if continuity.get("action_arc"):
+        numbered = " → ".join(
+            f"{index}) {step}" for index, step in enumerate(continuity["action_arc"], start=1)
+        )
+        lines.append(f"ACTION ARC (each shot continues the previous): {numbered}.")
+    return lines
+
+
 def build_storyboard_prompt(
     shot: Shot,
     brief: dict,
@@ -112,10 +156,15 @@ def build_storyboard_prompt(
     description: str = "",
     scene_bible: dict | None = None,
     has_scene_anchor: bool = False,
+    has_previous: bool = False,
 ) -> str:
-    """镜头级分镜图 prompt：身份锁定 + 风格锚点 + 场景圣经 + 画面 + 反负向词。"""
+    """镜头级分镜图 prompt：商品锁定 + 人物锁定 + 场景圣经 + 动作连贯 + 反向词。"""
     style = skill_config.get("prompt") or {}
-    negative = _merge_negative(str(style.get("negative") or ""))
+    presenter = resolve_presenter(skill_config)
+    continuity = resolve_continuity(skill_config)
+    negative = _merge_negative(
+        str(style.get("negative") or ""), allow_people=presenter.get("enabled", False)
+    )
     direction = (shot.prompt or "").strip()
     scene = (shot.scene or shot.action or "").strip()
     camera = (shot.camera or "static mid-shot").strip()
@@ -128,20 +177,33 @@ def build_storyboard_prompt(
         "same color variant, same screen, same head, same logo and proportions.",
         str(style.get("style") or "Photorealistic e-commerce commercial photography").strip(),
         *_scene_bible_lines(bible),
+        *_presenter_lines(presenter),
+        *_continuity_lines(continuity),
         f"Shot scene: {scene}.",
         f"Camera: {camera}.",
     ]
     if has_scene_anchor:
         lines.append(
             "The second reference image is the empty scene anchor: keep its location, props, "
-            "lighting and color grade exactly; place the product into that same space."
+            "lighting and color grade exactly; place the product and person into that same space."
+        )
+    if has_previous:
+        lines.append(
+            "The third reference image is the previous shot: keep the same person, same outfit, "
+            "same props and lighting, and continue the action from where the previous shot ended. "
+            "Do not reset the pose or move the set."
         )
     palette = style.get("palette") or []
     if palette:
         lines.append("Color palette accents: " + ", ".join(str(item) for item in palette) + ".")
+    framing = (
+        "the product occupies 40-60% of the frame"
+        if not presenter.get("enabled")
+        else "the person and the product share the frame, product stays readable"
+    )
     lines.append(
-        f"Framing: {ratio} vertical, the product occupies 40-60% of the frame. "
-        "The frame contains only the product and the fixed props — nothing else."
+        f"Framing: {ratio} vertical, {framing}. "
+        "The frame contains only the product, the person (if any) and the fixed props — nothing else."
     )
     lines.append("The frame must be text-free: no text, no letters, no numbers, no captions.")
     if direction:
@@ -169,17 +231,31 @@ def build_scene_anchor_prompt(
 
 
 def build_video_prompt(shot: Shot, skill_config: dict) -> str:
-    """图生视频 prompt：首帧固定，只允许轻微运镜与光线变化。"""
+    """图生视频 prompt：首帧固定，人物与动作延续，只允许轻微运镜与光线变化。"""
     style = skill_config.get("prompt") or {}
+    presenter = resolve_presenter(skill_config)
+    continuity = resolve_continuity(skill_config)
     camera = (shot.camera or "slow push-in").strip()
-    return (
-        "Use the first provided image as the exact first frame and keep its composition. "
-        f"Animate only a subtle {camera} and a gentle natural light shift over the clip. "
+    action = (shot.action or shot.scene or "").strip()
+    lines = [
+        "Use the first provided image as the exact first frame and keep its composition.",
+        f"Animate a subtle {camera} and a gentle natural light shift over the clip.",
         "Keep the product's shape, proportions, color, material, label, logo and screen unchanged; "
-        "no morphing, no extra objects, no people, no text, no watermark. "
-        f"{str(style.get('style') or '').strip()} "
-        "Photorealistic e-commerce commercial quality."
-    ).strip()
+        "no morphing, no extra objects, no text, no watermark.",
+    ]
+    if presenter.get("enabled"):
+        lines.append(
+            "Keep the same person, face, hair, outfit and body proportions as the first frame; "
+            "only natural micro-movements and the described action, no identity drift."
+        )
+    else:
+        lines.append("No people and no hands in frame.")
+    if continuity.get("mode") == "continuous_action" and action:
+        lines.append(f"The action continues naturally from the first frame: {action}.")
+    if str(style.get("style") or "").strip():
+        lines.append(str(style["style"]).strip())
+    lines.append("Photorealistic e-commerce commercial quality.")
+    return " ".join(lines)
 
 
 def _originals(session: Session, project_id: str, limit: int = 2) -> list[Path]:
@@ -302,6 +378,20 @@ async def generate_storyboard(
         anchor_path = settings.data_path / anchor.path
         if anchor_path.exists():
             reference_paths.append(anchor_path)
+
+    previous_asset: Asset | None = None
+    if shot.idx > 1:
+        previous_shot = (
+            session.query(Shot)
+            .filter(Shot.script_id == script.id, Shot.idx == shot.idx - 1)
+            .first()
+        )
+        if previous_shot is not None and previous_shot.keyframe_asset_id:
+            candidate = session.get(Asset, previous_shot.keyframe_asset_id)
+            if candidate is not None and (settings.data_path / candidate.path).exists():
+                previous_asset = candidate
+                reference_paths.append(settings.data_path / candidate.path)
+
     prompt = build_storyboard_prompt(
         shot,
         brief,
@@ -310,6 +400,7 @@ async def generate_storyboard(
         project.description or "",
         scene_bible=scene_bible,
         has_scene_anchor=anchor is not None,
+        has_previous=previous_asset is not None,
     )
     params = dict(settings.rest_image_params_dict)
     params.setdefault("aspectRatio", "portrait")
@@ -338,6 +429,7 @@ async def generate_storyboard(
             "review": "pending",
             "scene_bible": scene_bible,
             "scene_anchor": anchor.path if anchor is not None else None,
+            "previous_shot": previous_asset.path if previous_asset is not None else None,
         }
     )
     if existing is not None:

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
+import shutil
 import traceback
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from .config import Settings
 from .db import SessionLocal
 from .models import Asset, Generation, Product, Project, Script, Shot, Skill, Video
 from .errors import AppError
+from .services.audio import fit_voice, mix_video
 from .services.ffmpeg import concat, make_clip, normalize_video, probe
 from .services.keyframes import (
     ensure_ai_label,
@@ -21,11 +23,13 @@ from .services.keyframes import (
     generate_keyframe,
     generate_subtitle_png,
 )
+from .services.music import generate_bgm
 from .services.storyboard import (
     build_storyboard_review,
     build_video_prompt,
     generate_storyboard,
 )
+from .services.tts import synthesize, wav_duration
 from .utils import ensure_parent, get_font, json_dumps, json_loads, new_id, sha256_file
 
 logger = logging.getLogger(__name__)
@@ -700,6 +704,174 @@ async def _real_clip_one(project_id: str, script_id: str, shot_id: str, settings
         session.close()
 
 
+def _voice_one(project_id: str, shot_id: str, settings: Settings) -> Asset | None:
+    """为一镜台词生成配音 wav；文本没变则复用。"""
+    if not settings.tts_enabled:
+        return None
+    session = SessionLocal()
+    try:
+        project = session.get(Project, project_id)
+        shot = session.get(Shot, shot_id)
+        if not (project and shot):
+            return None
+        text = " ".join((shot.voiceover or "").split())
+        if not text:
+            return None
+        folder = settings.data_path / "projects" / project_id / "voice"
+        path = folder / f"voice_{shot.idx:02d}.wav"
+        existing = (
+            session.query(Asset)
+            .filter(
+                Asset.project_id == project_id,
+                Asset.kind == "voice",
+                Asset.filename == path.name,
+            )
+            .first()
+        )
+        if existing is not None:
+            meta = json_loads(existing.meta_json, {})
+            if meta.get("text") == text and int(meta.get("rate", settings.tts_rate)) == settings.tts_rate and path.exists():
+                return existing
+
+        ensure_parent(path)
+        synthesize(text, path, settings=settings)
+        duration = wav_duration(path)
+        meta_json = json_dumps(
+            {
+                "shot_idx": shot.idx,
+                "text": text,
+                "duration": duration,
+                "rate": settings.tts_rate,
+                "voice": settings.tts_voice,
+            }
+        )
+        if existing is not None:
+            asset = existing
+            asset.path = path.relative_to(settings.data_path).as_posix()
+            asset.duration = duration
+            asset.sha256 = sha256_file(path)
+            asset.meta_json = meta_json
+        else:
+            asset = Asset(
+                id=new_id("ast"),
+                project_id=project_id,
+                kind="voice",
+                filename=path.name,
+                path=path.relative_to(settings.data_path).as_posix(),
+                width=0,
+                height=0,
+                duration=duration,
+                sha256=sha256_file(path),
+                meta_json=meta_json,
+            )
+            session.add(asset)
+        session.commit()
+        session.refresh(asset)
+        return asset
+    finally:
+        session.close()
+
+
+def _bgm_one(
+    project_id: str, script_id: str, settings: Settings, duration: float
+) -> Asset | None:
+    """整条视频一首 BGM：一次生成、与成片等长，不做逐镜拼接。"""
+    if not settings.bgm_enabled or duration <= 0.5:
+        return None
+    session = SessionLocal()
+    try:
+        project = session.get(Project, project_id)
+        script = session.get(Script, script_id)
+        if not (project and script):
+            return None
+        skill = session.get(Skill, script.skill_id)
+        config = json_loads(skill.config_json, {}) if skill else {}
+        mood = settings.bgm_mood.strip() or str((config.get("audio") or {}).get("bgm_mood") or "warm")
+        folder = settings.data_path / "projects" / project_id / "audio"
+        path = folder / f"bgm_{script_id}.wav"
+        existing = (
+            session.query(Asset)
+            .filter(
+                Asset.project_id == project_id,
+                Asset.kind == "bgm",
+                Asset.filename == path.name,
+            )
+            .first()
+        )
+        if (
+            existing is not None
+            and abs(float(existing.duration or 0) - duration) < 0.4
+            and path.exists()
+            and json_loads(existing.meta_json, {}).get("mood") == mood
+        ):
+            return existing
+
+        ensure_parent(path)
+        generate_bgm(path, duration, mood)
+        meta_json = json_dumps(
+            {"duration": duration, "mood": mood, "engine": "local-synth", "scope": "whole_video"}
+        )
+        if existing is not None:
+            asset = existing
+            asset.path = path.relative_to(settings.data_path).as_posix()
+            asset.duration = duration
+            asset.sha256 = sha256_file(path)
+            asset.meta_json = meta_json
+        else:
+            asset = Asset(
+                id=new_id("ast"),
+                project_id=project_id,
+                kind="bgm",
+                filename=path.name,
+                path=path.relative_to(settings.data_path).as_posix(),
+                width=0,
+                height=0,
+                duration=duration,
+                sha256=sha256_file(path),
+                meta_json=meta_json,
+            )
+            session.add(asset)
+        session.commit()
+        session.refresh(asset)
+        return asset
+    finally:
+        session.close()
+
+
+def _voice_segments(
+    shots: list[dict], voice_assets: dict[int, Asset], settings: Settings, duration: float
+) -> list[tuple[Path, float]]:
+    """每句台词放进自己镜头的时隙：不重叠、不越界，超长时轻微加速。"""
+    entries: list[tuple[float, Path, float]] = []
+    start = 0.0
+    for shot in shots:
+        asset = voice_assets.get(int(shot["idx"]))
+        if asset is not None:
+            source = settings.data_path / asset.path
+            if source.exists():
+                entries.append((start, source, float(asset.duration or wav_duration(source))))
+        start += float(shot["seconds"])
+    if not entries:
+        return []
+
+    gap = 0.08
+    segments: list[tuple[Path, float]] = []
+    cursor = 0.0
+    for index, (planned_start, source, raw_duration) in enumerate(entries):
+        next_start = entries[index + 1][0] if index + 1 < len(entries) else duration
+        at = max(planned_start, cursor + gap)
+        at = min(at, max(0.0, duration - 0.5))
+        slot_end = min(duration - 0.05, max(next_start, at + 0.7))
+        slot = max(0.5, slot_end - at)
+        fitted = source
+        length = raw_duration
+        if raw_duration > slot:
+            fitted, length = fit_voice(settings, source, slot, cap=2.2)
+        segments.append((fitted, round(at, 3)))
+        cursor = at + length
+    return segments
+
+
 async def run_previs(
     generation_id: str, script_id: str, settings: Settings, *, force: bool = False
 ) -> None:
@@ -871,15 +1043,61 @@ async def run_render(generation_id: str, script_id: str, settings: Settings) -> 
                         clip_paths.append(settings.data_path / asset.path)
             if not clip_paths:
                 raise RuntimeError("没有可拼接的镜头")
-            final_path = settings.data_path / "projects" / project_id / "videos" / f"{script_id}.mp4"
+            video_dir = settings.data_path / "projects" / project_id / "videos"
+            silent_path = video_dir / f"{script_id}_silent.mp4"
+            final_path = video_dir / f"{script_id}.mp4"
             ensure_parent(final_path)
+            shot_plan = [
+                {"idx": shot.idx, "seconds": float(shot.seconds), "voiceover": shot.voiceover or ""}
+                for shot in shots
+            ]
+            shot_id_by_idx = {shot.idx: shot.id for shot in shots}
         finally:
             session.close()
 
-        _update_generation(generation_id, progress=88, message="正在拼接成片")
-        probe_info = await asyncio.to_thread(concat, settings, clip_paths, final_path)
+        _update_generation(generation_id, progress=86, message="正在拼接画面")
+        probe_info = await asyncio.to_thread(concat, settings, clip_paths, silent_path)
+        duration = float(probe_info.get("duration") or sum(item["seconds"] for item in shot_plan))
 
-        _update_generation(generation_id, progress=94, message="正在生成封面")
+        audio_info: dict = {}
+        audio_error = ""
+        try:
+            _update_generation(generation_id, progress=90, message="正在生成 AI 配音")
+            voice_assets: dict[int, Asset] = {}
+            for item in shot_plan:
+                if item["voiceover"].strip():
+                    asset = await asyncio.to_thread(
+                        _voice_one, project_id, shot_id_by_idx[item["idx"]], settings
+                    )
+                    if asset is not None:
+                        voice_assets[item["idx"]] = asset
+            _update_generation(generation_id, progress=93, message="正在生成整条背景音乐")
+            bgm = await asyncio.to_thread(_bgm_one, project_id, script_id, settings, duration)
+            segments = await asyncio.to_thread(
+                _voice_segments, shot_plan, voice_assets, settings, duration
+            )
+            if bgm is not None or segments:
+                _update_generation(generation_id, progress=96, message="正在混音")
+                audio_info = await asyncio.to_thread(
+                    mix_video,
+                    settings,
+                    silent_path,
+                    final_path,
+                    bgm=(settings.data_path / bgm.path) if bgm is not None else None,
+                    voices=segments,
+                    duration=duration,
+                    bgm_volume=settings.bgm_volume,
+                    voice_volume=settings.tts_volume,
+                )
+                audio_info["engine"] = "sapi+local-synth"
+            else:
+                shutil.copy2(silent_path, final_path)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("配音/混音失败，回退为无旁白成片：%s", exc)
+            audio_error = str(exc)[:300]
+            shutil.copy2(silent_path, final_path)
+
+        _update_generation(generation_id, progress=97, message="正在生成封面")
         cover = await asyncio.to_thread(_cover_one, project_id, script_id, settings)
 
         session = SessionLocal()
@@ -895,7 +1113,15 @@ async def run_render(generation_id: str, script_id: str, settings: Settings) -> 
                 width=probe_info["width"],
                 height=probe_info["height"],
                 status="ready",
-                meta_json=json_dumps({"mode": settings.ai_mode, "video_provider": provider, "codec": probe_info}),
+                meta_json=json_dumps(
+                    {
+                        "mode": settings.ai_mode,
+                        "video_provider": provider,
+                        "codec": probe_info,
+                        "audio": audio_info,
+                        "audio_error": audio_error,
+                    }
+                ),
             )
             session.add(video)
             project = session.get(Project, project_id)

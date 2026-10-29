@@ -87,6 +87,7 @@ export interface Video {
   width: number
   height: number
   status: string
+  meta?: Record<string, any>
   created_at?: string
 }
 

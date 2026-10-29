@@ -256,6 +256,19 @@ def _repair_duration(shots: list[dict], duration: int) -> None:
         shots[0]["seconds"] = max(1.0, round(float(shots[0]["seconds"]) + remaining, 2))
 
 
+def _fit_voiceover(text: str, seconds: float) -> str:
+    """按中文 TTS 约 4 字/秒裁剪台词，避免配音长过镜头。"""
+    clean = " ".join(str(text or "").split())
+    limit = max(6, int(round(float(seconds) * 3.6)))
+    if len(clean) <= limit:
+        return clean
+    for separator in ("。", "！", "？", "；", "，", ","):
+        index = clean.rfind(separator, 0, limit)
+        if index >= 4:
+            return clean[: index + 1]
+    return clean[:limit]
+
+
 def validate_and_repair(data: dict, duration: int, ratio: str, platform: str) -> dict:
     data = dict(data or {})
     shots = data.get("shots")
@@ -279,6 +292,8 @@ def validate_and_repair(data: dict, duration: int, ratio: str, platform: str) ->
         repaired.append(shot)
 
     _repair_duration(repaired, duration)
+    for shot in repaired:
+        shot["voiceover"] = _fit_voiceover(shot["voiceover"], float(shot["seconds"]))
     data["shots"] = repaired
     data["duration"] = duration
     data["ratio"] = ratio

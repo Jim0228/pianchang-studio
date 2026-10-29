@@ -81,15 +81,38 @@ class DeepSeekClient:
         ratio: str,
         goal: str,
     ) -> dict:
+        presenter = skill_config.get("presenter") or {}
+        continuity = skill_config.get("continuity") or {}
+        voice = skill_config.get("voice") or {}
+        people_rule = (
+            "画面必须出现同一位人物："
+            + str(presenter.get("description") or "")
+            + "；全片同一人、同一套衣服、同一发型，动作自然。"
+            if presenter.get("enabled")
+            else "画面不出现人物与手部。"
+        )
+        arc = " → ".join(str(item) for item in (continuity.get("action_arc") or []))
+        continuity_rule = (
+            f"动作必须连贯：每镜的起始动作承接上一镜的结束动作，动作弧线为 {arc}；"
+            "场景、台面、固定道具位置不变，只改变景别、机位与动作阶段。"
+            if arc
+            else "每个镜头是独立的商品镜头。"
+        )
+        voice_budget = max(8, int(duration * 2.9))
+        line_style = str(voice.get("line_style") or "口语短句")
         system = (
             "你是资深电商短视频编导。根据商品档案与视频风格 Skill，输出严格 JSON，不要 Markdown。"
             "结构：{title, shots:[{idx,seconds,beat,scene,camera,action,voiceover,on_screen,prompt}], "
             "cover:{title,subtitle}, caption:{title,body,hashtags:[...]}, style_bible:{...}}。"
-            f"镜头数 4-6，总时长必须等于 {duration} 秒；on_screen<=18字；voiceover<=40字。"
-            "scene/action 只写画面：商品 + 场景/道具 + 光线/运镜；全片必须是同一款、同一颜色的商品，"
-            "每个画面只出现一件商品；所有镜头限定在同一个场景空间（同一房间 / 同一台面 / 同一背景），"
-            "只改变景别、机位与使用动作；不写人物、手部、文字、价格牌、认证标志、销量、第二名商品。"
-            "不得虚构参数、功效、销量、认证；不得使用绝对化用语。只输出 JSON。"
+            f"镜头数 4-6，总时长必须等于 {duration} 秒；on_screen<=18字。"
+            f"voiceover 是给 TTS 朗读的台词：全片总字数 <= {voice_budget} 字，"
+            "单镜字数 <= 该镜秒数×3.2，必须是能直接朗读的中文短句，不要书面长句、不要括号注释、不要 emoji；"
+            f"风格：{line_style}。"
+            "scene/action 只写画面：商品 + 场景/道具 + 光线/运镜，"
+            "全片同一款同一颜色商品，每个画面只出现一件商品；所有镜头限定在同一场景空间。"
+            f"{people_rule}{continuity_rule}"
+            "不写文字、价格牌、认证标志、销量、第二名商品；不得虚构参数、功效、销量、认证；"
+            "不得使用绝对化用语。只输出 JSON。"
         )
         user = json.dumps(
             {
@@ -101,11 +124,16 @@ class DeepSeekClient:
                     "scenes": skill_config.get("scenes"),
                     "prompt": skill_config.get("prompt"),
                     "subtitle": skill_config.get("subtitle"),
+                    "presenter": presenter,
+                    "continuity": continuity,
+                    "voice": voice,
+                    "audio": skill_config.get("audio"),
                 },
                 "platform": platform,
                 "duration": duration,
                 "ratio": ratio,
                 "goal": goal,
+                "voice_budget_chars": voice_budget,
             },
             ensure_ascii=False,
         )

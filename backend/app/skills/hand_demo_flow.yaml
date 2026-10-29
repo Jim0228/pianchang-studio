@@ -1,0 +1,72 @@
+id: hand_demo_flow
+name: 手部连续演示
+category: seeding
+goal: 种草
+version: 1
+platforms: [douyin, xiaohongshu]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [家居清洁, 美妆个护, 食品饮料, 小家电, 日用品]
+not_suitable: [3C数码, 大件家居]
+beats:
+  - { id: hook, seconds: 2, purpose: "手部动作直接开场" }
+  - { id: open, seconds: 3, purpose: "拿起/打开产品" }
+  - { id: use, seconds: 4, purpose: "连续使用动作" }
+  - { id: result, seconds: 3, purpose: "展示结果" }
+  - { id: cta, seconds: 3, purpose: "手部收尾 + 行动指令" }
+shots:
+  min: 4
+  max: 5
+  seconds: [2, 5]
+  product_visible_ratio: 0.7
+  presenter: hands
+prompt:
+  style: "手部演示广告，一镜到底感，浅景深，干净台面，动作流畅"
+  lighting: "顶部柔光 + 侧补光，阴影柔和"
+  palette: ["#F7F2E9", "#D9C7AE", "#2F2A24"]
+  camera: [俯拍近景, 手部特写, 侧面近景, 俯拍特写, 固定近景]
+  negative: "变形, 多余手, 错误文字, 水印, 低清晰度, 手指畸形"
+  product_lock: "严格保持商品外形、比例、颜色、材质、Logo 不变；手始终是同一双手、同一袖口"
+subtitle:
+  style: soft_white
+  position: lower_third
+  max_chars_per_line: 12
+presenter:
+  enabled: true
+  type: hand_model
+  description: "一双干净的成年女性手，裸色短甲，浅米色针织袖口；全片只出现这一双手，不出现脸"
+  framing: "俯拍手部为主，不出现人物面部"
+continuity:
+  mode: continuous_action
+  action_arc: ["手从画面右侧拿起产品", "另一只手打开盖子", "双手配合挤压/喷洒", "手把产品放回台面并抹开结果", "手轻拍产品收尾"]
+  rules:
+    - "同一双手、同一袖口、同一光线贯穿全片"
+    - "动作从上一镜结束位置继续，不重新摆拍"
+    - "台面、道具位置不变，只改变机位与景别"
+voice:
+  enabled: true
+  rate: 0
+  line_style: "旁白口吻，短句，每镜不超过 10 字，全片不超过 45 字"
+audio:
+  mode: voiceover
+  bgm_mood: light
+  bgm_note: "整条 15 秒一首：轻快琶音 + 轻鼓点，结尾淡出"
+scenes:
+  - "浅色台面上，手从画面右侧拿起产品"
+  - "手部特写，打开产品盖子"
+  - "双手配合挤压/喷洒，动作连贯"
+  - "手把结果抹开，台面出现明显对比"
+  - "手把产品放回台面，轻拍一下"
+scene_bible:
+  location: "浅色木质台面的产品演示区"
+  time_of_day: "daytime"
+  props: ["浅色木纹台面", "白色陶瓷小碟", "折叠的棉布", "窗边光影"]
+  lighting: "顶部柔光 + 侧补光，阴影柔和"
+  grade: "暖米色，低饱和，干净通透"
+  lens: "50mm 等效，俯拍浅景深"
+copy:
+  hook: ["看这一下", "不用多说，看动作"]
+  open: ["先打开", "就这一步"]
+  use: ["挤一点就够", "抹开试试"]
+  result: ["擦完就亮了", "差别在这"]
+  cta: ["下方有同款", "想试的点下面"]

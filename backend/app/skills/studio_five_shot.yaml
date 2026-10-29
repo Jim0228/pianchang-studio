@@ -1,0 +1,72 @@
+id: studio_five_shot
+name: 五镜连贯广告
+category: brand
+goal: 品牌
+version: 1
+platforms: [douyin, xiaohongshu, shipinhao]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [美妆个护, 3C数码, 食品饮料, 小家电, 香氛]
+not_suitable: [生鲜, 虚拟服务]
+beats:
+  - { id: hook, seconds: 2, purpose: "产品 + 人物同框开场" }
+  - { id: detail, seconds: 3, purpose: "细节特写，人物入画" }
+  - { id: use, seconds: 4, purpose: "连续使用动作" }
+  - { id: proof, seconds: 3, purpose: "结果与表情" }
+  - { id: cta, seconds: 3, purpose: "定版收尾" }
+shots:
+  min: 4
+  max: 5
+  seconds: [2, 5]
+  product_visible_ratio: 0.65
+  presenter: host
+prompt:
+  style: "高端品牌广告，影棚布光，人物与产品同框，画面干净，电影感"
+  lighting: "主光 + 轮廓光，背景渐变，肤色通透"
+  palette: ["#F2EEE7", "#C9B79C", "#1D1A17"]
+  camera: [中景, 特写, 手部近景, 近景, 定版中景]
+  negative: "变形, 多余人物, 错误文字, 水印, 低清晰度, 换装, 塑料感"
+  product_lock: "严格保持商品外形、比例、颜色、材质、Logo 与文字不变；人物与服装全片一致"
+subtitle:
+  style: minimal_white
+  position: lower_third
+  max_chars_per_line: 10
+presenter:
+  enabled: true
+  type: host
+  description: "30 岁左右亚洲女性，黑色高领上衣，头发挽起，妆容干净；全片同一人、同一套衣服，影棚同机位"
+  framing: "中景与近景交替，人物不遮挡产品标签"
+continuity:
+  mode: continuous_action
+  action_arc: ["人物把产品放上展台", "手指划过产品表面", "拿起产品做使用动作", "展示结果，看向镜头", "产品与人同框定版"]
+  rules:
+    - "同一人物、同一服装、同一影棚背景贯穿全片"
+    - "产品位置和朝向在镜头间连续，不突然翻转"
+    - "动作节奏从慢到快再到定版，情绪统一"
+voice:
+  enabled: true
+  rate: 0
+  line_style: "品牌旁白，短句，克制，每镜不超过 9 字，全片不超过 40 字"
+audio:
+  mode: voiceover
+  bgm_mood: inspiring
+  bgm_note: "整条 15 秒一首：低音铺底渐强，中段进入鼓点，结尾收束"
+scenes:
+  - "影棚展台上，人物把产品轻轻放下，背景是暖灰渐变"
+  - "手指划过产品表面，材质高光流动"
+  - "人物拿起产品，完成一次完整使用动作"
+  - "人物看向镜头，展示使用后的结果"
+  - "产品与人物同框，画面定版"
+scene_bible:
+  location: "暖灰渐变的影棚展台"
+  time_of_day: "studio"
+  props: ["暖灰渐变背景", "深色石材展台", "一束侧光", "产品包装盒"]
+  lighting: "主光 + 轮廓光，背景渐变"
+  grade: "低饱和暖灰，高光克制，电影感"
+  lens: "50mm 等效，中景浅景深"
+copy:
+  hook: ["把日常，做得更好", "从这一件开始"]
+  detail: ["细节，经得起看", "材质说明一切"]
+  use: ["用起来很简单", "一步就好"]
+  proof: ["效果，看得见", "不用多说"]
+  cta: ["现在，去试试", "了解更多"]

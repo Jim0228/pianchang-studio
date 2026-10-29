@@ -126,6 +126,7 @@ def _video_dict(db: Session, video: Video | None) -> dict | None:
         "width": video.width,
         "height": video.height,
         "status": video.status,
+        "meta": json_loads(video.meta_json, {}),
         "created_at": video.created_at.isoformat() if video.created_at else None,
     }
 

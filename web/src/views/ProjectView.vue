@@ -171,6 +171,10 @@ onUnmounted(() => {
           <div class="player-foot">
             <span v-if="video">{{ video.width }}×{{ video.height }} · {{ video.duration.toFixed(1) }}s</span>
             <span v-else>9:16 · 1080×1920</span>
+            <span v-if="video?.meta?.audio?.voices?.length" class="pill">
+              AI 配音 {{ video.meta.audio.voices.length }} 句
+            </span>
+            <span v-if="video?.meta?.audio?.bgm" class="pill">整条 BGM</span>
             <span class="ai-badge">AI 生成</span>
           </div>
         </section>

@@ -27,6 +27,8 @@ def client(tmp_path: Path):
         video_width=540,
         video_height=960,
         fps=24,
+        tts_enabled=False,
+        bgm_enabled=False,
     )
     app = create_app(settings)
     with TestClient(app) as test_client:

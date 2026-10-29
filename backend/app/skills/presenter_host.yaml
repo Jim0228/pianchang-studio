@@ -1,0 +1,72 @@
+id: presenter_host
+name: 主播出镜带货
+category: conversion
+goal: 转化
+version: 1
+platforms: [douyin, xiaohongshu, shipinhao]
+durations: [15, 30]
+ratios: ["9:16"]
+suitable_categories: [美妆个护, 家居清洁, 小家电, 食品饮料, 3C数码]
+not_suitable: [高客单耐消, 虚拟服务]
+beats:
+  - { id: hook, seconds: 2, purpose: "主播一句话抛出结论" }
+  - { id: intro, seconds: 3, purpose: "人物出镜介绍产品" }
+  - { id: demo, seconds: 4, purpose: "连续动作演示效果" }
+  - { id: proof, seconds: 3, purpose: "结果/细节验证" }
+  - { id: cta, seconds: 3, purpose: "看镜头给行动指令" }
+shots:
+  min: 4
+  max: 5
+  seconds: [2, 5]
+  product_visible_ratio: 0.6
+  presenter: host
+prompt:
+  style: "真人出镜口播广告，手持感轻微，真实自然光，生活化但干净"
+  lighting: "窗边柔光 + 正面补光，肤色自然"
+  palette: ["#F6F1E7", "#D8C4A7", "#2E2A26"]
+  camera: [半身中景, 近景, 手部特写, 半身中景, 中景]
+  negative: "变形, 多余人物, 错误文字, 水印, 低清晰度, 换脸, 服装变化"
+  product_lock: "严格保持商品外形、比例、颜色、材质、Logo 与文字不变；人物始终是同一人、同一套衣服"
+subtitle:
+  style: bold_yellow
+  position: lower_third
+  max_chars_per_line: 12
+presenter:
+  enabled: true
+  type: host
+  description: "28 岁左右亚洲女性，浅灰色针织上衣，深色长裤，低马尾，淡妆，表情自然；全片同一人、同一套衣服、同一发型"
+  framing: "半身中景为主，演示时给手部近景"
+continuity:
+  mode: continuous_action
+  action_arc: ["看向镜头打招呼并举起产品", "把产品放到台面并按下开关", "双手演示使用过程", "拿起产品展示使用后的结果", "放下产品看向镜头收尾"]
+  rules:
+    - "同一个人、同一套衣服、同一发型贯穿所有镜头"
+    - "每个镜头的起始动作接上一镜的结束动作"
+    - "场景、台面、背景道具位置不变，只改变景别与机位"
+voice:
+  enabled: true
+  rate: 0
+  line_style: "第一人称口语短句，每镜不超过 10 字，全片不超过 45 字"
+audio:
+  mode: voiceover
+  bgm_mood: warm
+  bgm_note: "整条 15 秒一首：前 2 秒钢琴铺底，中段加入轻鼓点，结尾收住"
+scenes:
+  - "明亮的厨房台面前，主播半身出镜，手里拿着产品"
+  - "主播把产品放到台面，手指按下开关"
+  - "手部近景演示产品使用过程，动作连贯"
+  - "主播举起产品展示结果，表情满意"
+  - "主播放下产品，看向镜头微笑收尾"
+scene_bible:
+  location: "明亮整洁的现代厨房台面一角"
+  time_of_day: "morning"
+  props: ["浅色石英台面", "白色墙砖", "一小盆绿植", "折叠的棉布"]
+  lighting: "窗边柔光 + 正面补光，肤色自然"
+  grade: "暖米色，低饱和，柔和对比"
+  lens: "35mm 等效，半身景浅景深"
+copy:
+  hook: ["这个是真的省事", "先看效果，再说值不值"]
+  intro: ["我用了一个月", "就是这瓶，天天在用"]
+  demo: ["一按就出泡", "擦两下就干净"]
+  proof: ["你看这个亮度", "不是盖的"]
+  cta: ["下方自己看", "想要的点下面"]

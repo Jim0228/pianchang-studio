@@ -71,6 +71,17 @@ class Settings(BaseSettings):
     deepseek_base_url: str = "https://api.deepseek.com"
     deepseek_model: str = "deepseek-chat"
 
+    # 配音（Windows SAPI，逐镜台词）
+    tts_enabled: bool = True
+    tts_voice: str = "Microsoft Huihui Desktop"
+    tts_rate: int = 1
+    tts_volume: float = 1.0
+
+    # 背景音乐（本地合成，整条视频一首）
+    bgm_enabled: bool = True
+    bgm_volume: float = 0.22
+    bgm_mood: str = ""
+
     @property
     def mcp_configured(self) -> bool:
         return bool(self.mcp_video_url.strip() and self.mcp_video_token.strip())

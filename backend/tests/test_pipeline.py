@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import io
 import json
+import wave
 import zipfile
 
 from PIL import Image, ImageDraw
 
 from backend.app.models import Shot
 from backend.app.services.compliance import check_text
+from backend.app.services.music import generate_bgm
+from backend.app.services.script import _fit_voiceover
 from backend.app.services.storyboard import (
     IDENTITY_LOCK,
     build_storyboard_prompt,
@@ -44,7 +47,7 @@ def test_health_skills_and_platforms(client):
 
     skills = client.get("/api/skills")
     assert skills.status_code == 200
-    assert len(skills.json()) == 9
+    assert len(skills.json()) == 13
 
     platforms = client.get("/api/platforms")
     assert platforms.status_code == 200
@@ -242,5 +245,50 @@ def test_regenerate_one_shot_keeps_other_storyboards(client):
     after = client.get(f"/api/projects/{project_id}").json()["script"]["shots"]
     assert all(shot["keyframe_path"] for shot in after)
     assert after[0]["keyframe_path"] == f"projects/{project_id}/keyframes/shot_01.jpg"
+
+
+def test_voiceover_is_trimmed_to_shot_budget():
+    long_line = "这一句口播非常长，如果原样念下去一定会压到下一个镜头，所以必须在脚本层就裁掉多余的部分"
+    fitted = _fit_voiceover(long_line, 3.0)
+    assert len(fitted) <= 13
+    assert _fit_voiceover("一喷一擦", 3.0) == "一喷一擦"
+
+
+def test_bgm_matches_requested_duration(tmp_path):
+    path = generate_bgm(tmp_path / "bgm.wav", 4.0, "warm")
+    with wave.open(str(path), "rb") as handle:
+        duration = handle.getnframes() / float(handle.getframerate())
+    assert abs(duration - 4.0) < 0.15
+
+
+def test_presenter_and_continuity_reach_storyboard_prompt():
+    shot = Shot(idx=3, scene="主播拿起产品演示", camera="近景", action="按下开关")
+    brief = {"title": "声波电动牙刷", "category": "个护"}
+    config = {
+        "prompt": {"style": "真实生活质感", "lighting": "窗边柔光", "negative": "变形"},
+        "presenter": {
+            "enabled": True,
+            "type": "host",
+            "description": "28 岁亚洲女性，浅灰针织衫，低马尾",
+            "framing": "半身中景",
+        },
+        "continuity": {
+            "mode": "continuous_action",
+            "action_arc": ["拿起", "按下开关", "展示结果"],
+            "rules": ["同一人同一套衣服", "动作接续上一镜"],
+        },
+    }
+
+    prompt = build_storyboard_prompt(shot, brief, config, "9:16", has_previous=True)
+    assert "SAME PERSON IN EVERY SHOT" in prompt
+    assert "浅灰针织衫" in prompt
+    assert "CONTINUITY RULES" in prompt
+    assert "1) 拿起" in prompt
+    assert "third reference image is the previous shot" in prompt
+    assert "no people" not in prompt.lower()
+
+    video = build_video_prompt(shot, config)
+    assert "same person" in video.lower()
+    assert "按下开关" in video
 
 
